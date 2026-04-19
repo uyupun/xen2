@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:xen2/components/primary_button.dart';
 import 'package:xen2/constants/app_colors.dart';
+import 'package:xen2/pages/play_page.dart';
 
 class TopPage extends StatelessWidget {
   const TopPage({super.key});
@@ -28,10 +29,10 @@ class TopPage extends StatelessWidget {
               child: PrimaryButton(
                 label: '禅',
                 onPressed: () {
-                  // Navigator.pushReplacement(
-                  //   context,
-                  //   MaterialPageRoute(builder: (_) => const PlayPage()),
-                  // );
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PlayPage()),
+                  );
                 },
               ),
             ),
