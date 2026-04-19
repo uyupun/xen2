@@ -1,4 +1,7 @@
 PODS:
+  - audioplayers_darwin (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - Flutter (1.0.0)
   - KalturaNetKit (1.6.1):
     - KalturaNetKit/Core (= 1.6.1)
@@ -34,6 +37,7 @@ PODS:
     - ObjcExceptionBridging
 
 DEPENDENCIES:
+  - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
   - Flutter (from `Flutter`)
   - vr_player (from `.symlinks/plugins/vr_player/ios`)
 
@@ -50,12 +54,15 @@ SPEC REPOS:
     - XCGLogger
 
 EXTERNAL SOURCES:
+  audioplayers_darwin:
+    :path: ".symlinks/plugins/audioplayers_darwin/darwin"
   Flutter:
     :path: Flutter
   vr_player:
     :path: ".symlinks/plugins/vr_player/ios"
 
 SPEC CHECKSUMS:
+  audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   KalturaNetKit: 2af6c3c2a1abbd8936b5acde45f33f5195125f4a
   ObjcExceptionBridging: d3d37d62981bb7f252ecb31b62d7e23a96bbfb8a
