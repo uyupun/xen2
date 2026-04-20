@@ -65,7 +65,11 @@ class PlayPageState extends ConsumerState<PlayPage> {
     foregroundWidget.value = const _ZazenEnding();
     ref.read(dualVrPlayerControllerProvider.notifier).pause();
     await _bgmPlayer.stop();
-    await _bellPlayer.play(AssetSource('assets/temple_bell.mp3'), volume: 0.5);
+    await _bellPlayer.stop();
+    await _bellPlayer.play(
+      AssetSource('assets/temple_bell_end.mp3'),
+      volume: 0.5,
+    );
     await Future.delayed(const Duration(seconds: 3));
 
     // リザルト画面の表示
