@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:xen2/components/outlined_text.dart';
+import 'package:xen2/features/pavlok/pavlok_provider.dart';
 import 'package:xen2/features/vr_player/dual_vr_player.dart';
 import 'package:xen2/features/vr_player/dual_vr_player_controller_notifier_provider.dart';
 
@@ -56,7 +57,8 @@ class PlayPageState extends ConsumerState<PlayPage> {
     await _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.25);
     await Future.delayed(const Duration(seconds: 30));
 
-    // todo: 喝を行う
+    // 喝（Pavlokへ通信して刺激を与える）
+    foregroundWidget.value = const _Katsu();
     await Future.delayed(const Duration(seconds: 30));
 
     // 坐禅終了（動画と音声を停止）
@@ -127,6 +129,32 @@ class _ZazenInProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SizedBox.shrink();
+  }
+}
+
+class _Katsu extends HookConsumerWidget {
+  const _Katsu();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final countdown = useState(3);
+    useEffect(() {
+      if (countdown.value >= 0) {
+        Future.delayed(const Duration(seconds: 1), () async {
+          countdown.value -= 1;
+          if (countdown.value == 0) {
+            ref.read(pavlokProvider.future).catchError((e) {
+              debugPrint('Failed to connect to Pavlok: $e');
+            });
+          }
+        });
+      }
+      return null;
+    }, [countdown.value]);
+
+    final text = countdown.value > 0 ? '警策を行います: ${countdown.value}' : '';
+
+    return OutlinedText(text: text, fontSize: 20);
   }
 }
 
