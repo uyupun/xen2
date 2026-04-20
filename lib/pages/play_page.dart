@@ -36,16 +36,16 @@ class PlayPageState extends ConsumerState<PlayPage> {
     super.dispose();
   }
 
-  Future<void> _flow(ValueNotifier<Widget> foregroundWidget) async {
+  Future<void> _runZazenFlow(ValueNotifier<Widget> foregroundWidget) async {
     // 姿勢の検証
     await Future.delayed(const Duration(seconds: 15));
 
     // 検証完了
-    foregroundWidget.value = const _Flow2();
+    foregroundWidget.value = const _PostureConfirmed();
     await Future.delayed(const Duration(seconds: 5));
 
     // 坐禅開始（動画と音声を再生）
-    foregroundWidget.value = const _Flow3();
+    foregroundWidget.value = const _ZazenInProgress();
     ref.read(dualVrPlayerControllerProvider.notifier).play();
     await _bellPlayer.play(
       AssetSource('assets/temple_bell_start.mp3'),
@@ -54,25 +54,28 @@ class PlayPageState extends ConsumerState<PlayPage> {
     await Future.delayed(const Duration(seconds: 9));
     // todo: ループ時に音が途切れないようにしたい
     await _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.25);
-    await Future.delayed(const Duration(seconds: 60));
+    await Future.delayed(const Duration(seconds: 30));
+
+    // todo: 喝を行う
+    await Future.delayed(const Duration(seconds: 30));
 
     // 坐禅終了（動画と音声を停止）
-    foregroundWidget.value = const _Flow4();
+    foregroundWidget.value = const _ZazenEnding();
     ref.read(dualVrPlayerControllerProvider.notifier).pause();
     await _bgmPlayer.stop();
     await _bellPlayer.play(AssetSource('assets/temple_bell.mp3'), volume: 0.5);
     await Future.delayed(const Duration(seconds: 3));
 
     // リザルト画面の表示
-    foregroundWidget.value = const _Flow5();
+    foregroundWidget.value = const _ResultDisplay();
   }
 
   @override
   Widget build(BuildContext context) {
-    final foregroundWidget = useState<Widget>(const _Flow1());
+    final foregroundWidget = useState<Widget>(const _PostureDetecting());
 
     useEffect(() {
-      _flow(foregroundWidget);
+      _runZazenFlow(foregroundWidget);
 
       return null;
     }, []);
@@ -86,8 +89,8 @@ class PlayPageState extends ConsumerState<PlayPage> {
   }
 }
 
-class _Flow1 extends StatelessWidget {
-  const _Flow1();
+class _PostureDetecting extends StatelessWidget {
+  const _PostureDetecting();
 
   @override
   Widget build(BuildContext context) {
@@ -102,8 +105,8 @@ class _Flow1 extends StatelessWidget {
   }
 }
 
-class _Flow2 extends StatelessWidget {
-  const _Flow2();
+class _PostureConfirmed extends StatelessWidget {
+  const _PostureConfirmed();
 
   @override
   Widget build(BuildContext context) {
@@ -118,8 +121,8 @@ class _Flow2 extends StatelessWidget {
   }
 }
 
-class _Flow3 extends StatelessWidget {
-  const _Flow3();
+class _ZazenInProgress extends StatelessWidget {
+  const _ZazenInProgress();
 
   @override
   Widget build(BuildContext context) {
@@ -127,8 +130,8 @@ class _Flow3 extends StatelessWidget {
   }
 }
 
-class _Flow4 extends StatelessWidget {
-  const _Flow4();
+class _ZazenEnding extends StatelessWidget {
+  const _ZazenEnding();
 
   @override
   Widget build(BuildContext context) {
@@ -136,8 +139,8 @@ class _Flow4 extends StatelessWidget {
   }
 }
 
-class _Flow5 extends StatelessWidget {
-  const _Flow5();
+class _ResultDisplay extends StatelessWidget {
+  const _ResultDisplay();
 
   @override
   Widget build(BuildContext context) {
