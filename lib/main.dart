@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:xen2/constants/app_colors.dart';
+import 'package:xen2/pages/imu_debug_page.dart';
 import 'package:xen2/pages/top_page.dart';
+
+const _imuDebug = bool.fromEnvironment('IMU_DEBUG');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +29,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
-      home: const TopPage(),
+      home: _imuDebug ? const ImuDebugPage() : const TopPage(),
     );
   }
 }
