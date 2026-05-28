@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:xen2/features/imu/imu_service.dart';
+import 'package:xen2/features/zazen/hanshi_painter.dart';
 
 class ImuDebugPage extends StatelessWidget {
   const ImuDebugPage({super.key});
@@ -19,6 +20,8 @@ class ImuDebugPage extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           children: [
             _ForwardDetectionCard(stream: service.attitudeStream),
+            const SizedBox(height: 12),
+            _PostureResultCard(stream: service.attitudeStream),
             const SizedBox(height: 12),
             _AttitudeCard(stream: service.attitudeStream),
             const SizedBox(height: 12),
@@ -44,6 +47,163 @@ class ImuDebugPage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PostureResultCard extends StatefulWidget {
+  const _PostureResultCard({required this.stream});
+  final Stream<AttitudeData> stream;
+
+  @override
+  State<_PostureResultCard> createState() => _PostureResultCardState();
+}
+
+class _PostureResultCardState extends State<_PostureResultCard> {
+  StreamSubscription<AttitudeData>? _sub;
+  Timer? _samplingTimer;
+  AttitudeData? _latestAttitude;
+  AttitudeData? _baseline;
+  final List<AttitudeData> _history = [];
+  int _sampleCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = widget.stream.listen((data) => _latestAttitude = data);
+    _samplingTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (_latestAttitude == null) return;
+      _baseline ??= _latestAttitude;
+      setState(() {
+        _history.add(_latestAttitude!);
+        _sampleCount = _history.length;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _samplingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showResult() {
+    final history = List<AttitudeData>.unmodifiable(_history);
+    final baseline = _baseline;
+    showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _HanshiDialog(postureHistory: history, postureBaseline: baseline),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('姿勢ログ', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'サンプル数: $_sampleCount',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
+            if (_latestAttitude != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'pitch: ${(_latestAttitude!.pitch * 180 / pi).toStringAsFixed(1)}°'
+                '  |roll|−90°: ${((_latestAttitude!.roll.abs() - pi / 2) * 180 / pi).toStringAsFixed(1)}°'
+                '  合計: ${((_latestAttitude!.pitch + _latestAttitude!.roll.abs() - pi / 2) * 180 / pi).toStringAsFixed(1)}°',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.blue,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _sampleCount >= 2 ? _showResult : null,
+                child: const Text('結果を確認'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HanshiDialog extends StatefulWidget {
+  const _HanshiDialog({
+    required this.postureHistory,
+    required this.postureBaseline,
+  });
+
+  final List<AttitudeData> postureHistory;
+  final AttitudeData? postureBaseline;
+
+  @override
+  State<_HanshiDialog> createState() => _HanshiDialogState();
+}
+
+class _HanshiDialogState extends State<_HanshiDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('姿勢ログ', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: HanshiPainter.maxSwayPx * 2 + 24,
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, _) => CustomPaint(
+                    painter: HanshiPainter(
+                      progress: _controller.value,
+                      postureHistory: widget.postureHistory,
+                      postureBaseline: widget.postureBaseline,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('閉じる'),
+              ),
+            ],
+          ),
         ),
       ),
     );
