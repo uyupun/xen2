@@ -3,6 +3,8 @@ PODS:
     - Flutter
     - FlutterMacOS
   - Flutter (1.0.0)
+  - flutter_native_splash (2.4.3):
+    - Flutter
   - KalturaNetKit (1.6.1):
     - KalturaNetKit/Core (= 1.6.1)
   - KalturaNetKit/Core (1.6.1):
@@ -39,6 +41,7 @@ PODS:
 DEPENDENCIES:
   - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
   - Flutter (from `Flutter`)
+  - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
   - vr_player (from `.symlinks/plugins/vr_player/ios`)
 
 SPEC REPOS:
@@ -58,12 +61,15 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/audioplayers_darwin/darwin"
   Flutter:
     :path: Flutter
+  flutter_native_splash:
+    :path: ".symlinks/plugins/flutter_native_splash/ios"
   vr_player:
     :path: ".symlinks/plugins/vr_player/ios"
 
 SPEC CHECKSUMS:
   audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
   KalturaNetKit: 2af6c3c2a1abbd8936b5acde45f33f5195125f4a
   ObjcExceptionBridging: d3d37d62981bb7f252ecb31b62d7e23a96bbfb8a
   PlayKit: 91b18b80ca59331722ce3738c14b8f469279686d
