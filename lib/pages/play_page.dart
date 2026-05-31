@@ -8,6 +8,7 @@ import 'package:xen2/features/imu/imu_service.dart';
 import 'package:xen2/features/zazen/koans.dart';
 import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
 import 'package:xen2/features/zazen/play_flow/katsu.dart';
+import 'package:xen2/features/zazen/play_flow/eyes_half_closed.dart';
 import 'package:xen2/features/zazen/play_flow/koan_display.dart';
 import 'package:xen2/features/zazen/play_flow/posture_confirmed.dart';
 import 'package:xen2/features/zazen/play_flow/posture_detecting.dart';
@@ -70,6 +71,10 @@ class PlayPageState extends ConsumerState<PlayPage> {
     // 公案をランダムに表示
     foregroundWidget.value = KoanDisplay(koan: randomKoan());
     await Future.delayed(const Duration(seconds: 10));
+
+    // 目を半分閉じることを推奨
+    foregroundWidget.value = const EyesHalfClosed();
+    await Future.delayed(const Duration(seconds: 5));
 
     // 坐禅開始（動画と音声を再生）+ 1秒ごとにサンプリング開始
     foregroundWidget.value = const ZazenInProgress();
