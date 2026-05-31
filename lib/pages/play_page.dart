@@ -4,11 +4,13 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:xen2/components/outlined_text.dart';
-import 'package:xen2/constants/app_colors.dart';
 import 'package:xen2/features/imu/imu_service.dart';
-import 'package:xen2/features/pavlok/pavlok_provider.dart';
-import 'package:xen2/features/zazen/hanshi_painter.dart';
+import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
+import 'package:xen2/features/zazen/play_flow/katsu.dart';
+import 'package:xen2/features/zazen/play_flow/posture_confirmed.dart';
+import 'package:xen2/features/zazen/play_flow/posture_detecting.dart';
+import 'package:xen2/features/zazen/play_flow/result_display.dart';
+import 'package:xen2/features/zazen/play_flow/zazen_in_progress.dart';
 import 'package:xen2/features/vr_player/dual_vr_player.dart';
 import 'package:xen2/features/vr_player/dual_vr_player_controller_notifier_provider.dart';
 import 'package:xen2/pages/top_page.dart';
@@ -55,16 +57,16 @@ class PlayPageState extends ConsumerState<PlayPage> {
   }
 
   Future<void> _runZazenFlow(ValueNotifier<Widget> foregroundWidget) async {
-    // 姿勢の検証
-    await Future.delayed(const Duration(seconds: 20));
+    // キャリブレーション（VRゴーグル装着＋正面向きを5秒間維持で完了）
+    await ref.read(zazenCalibrationProvider.notifier).start();
 
-    // 検証完了 + ベースライン記録
+    // キャリブレーション完了 + ベースライン記録
     _postureBaseline = _latestAttitude;
-    foregroundWidget.value = const _PostureConfirmed();
+    foregroundWidget.value = const PostureConfirmed();
     await Future.delayed(const Duration(seconds: 5));
 
     // 坐禅開始（動画と音声を再生）+ 1秒ごとにサンプリング開始
-    foregroundWidget.value = const _ZazenInProgress();
+    foregroundWidget.value = const ZazenInProgress();
     ref.read(dualVrPlayerControllerProvider.notifier).play();
     _samplingTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       if (_latestAttitude != null) _postureHistory.add(_latestAttitude!);
@@ -79,7 +81,7 @@ class PlayPageState extends ConsumerState<PlayPage> {
     await Future.delayed(const Duration(seconds: 30));
 
     // 喝（Pavlokへ通信して刺激を与える）
-    foregroundWidget.value = const _Katsu();
+    foregroundWidget.value = const Katsu();
     await Future.delayed(const Duration(seconds: 30));
 
     // 坐禅終了（動画と音声を停止）+ サンプリング停止
@@ -95,7 +97,7 @@ class PlayPageState extends ConsumerState<PlayPage> {
     await Future.delayed(const Duration(seconds: 3));
 
     // リザルト画面の表示
-    foregroundWidget.value = _ResultDisplay(
+    foregroundWidget.value = ResultDisplay(
       postureHistory: List.unmodifiable(_postureHistory),
       postureBaseline: _postureBaseline,
     );
@@ -103,7 +105,7 @@ class PlayPageState extends ConsumerState<PlayPage> {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundWidget = useState<Widget>(const _PostureDetecting());
+    final foregroundWidget = useState<Widget>(const PostureDetecting());
 
     useEffect(() {
       _runZazenFlow(foregroundWidget);
@@ -132,205 +134,4 @@ class PlayPageState extends ConsumerState<PlayPage> {
       ),
     );
   }
-}
-
-class _PostureDetecting extends StatelessWidget {
-  const _PostureDetecting();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        OutlinedText(text: 'VRゴーグルを装着して\n坐禅の姿勢でお待ちください', fontSize: 20),
-        SizedBox(height: 8),
-        OutlinedText(text: '検知中...', fontSize: 14),
-      ],
-    );
-  }
-}
-
-class _PostureConfirmed extends StatelessWidget {
-  const _PostureConfirmed();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        OutlinedText(text: '姿勢を確認しました', fontSize: 20),
-        SizedBox(height: 8),
-        OutlinedText(text: 'まもなく開始します', fontSize: 14),
-      ],
-    );
-  }
-}
-
-class _ZazenInProgress extends StatelessWidget {
-  const _ZazenInProgress();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
-
-class _Katsu extends HookConsumerWidget {
-  const _Katsu();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final countdown = useState(3);
-    useEffect(() {
-      if (countdown.value >= 0) {
-        Future.delayed(const Duration(seconds: 1), () async {
-          countdown.value -= 1;
-          if (countdown.value == 0) {
-            ref.read(pavlokProvider.future).catchError((e) {
-              debugPrint('Failed to connect to Pavlok: $e');
-            });
-          }
-        });
-      }
-      return null;
-    }, [countdown.value]);
-
-    final text = countdown.value > 0 ? '警策を行います: ${countdown.value}' : '';
-
-    return OutlinedText(text: text, fontSize: 20);
-  }
-}
-
-class _ZazenEnding extends StatelessWidget {
-  const _ZazenEnding();
-
-  @override
-  Widget build(BuildContext context) {
-    return const OutlinedText(text: '終了', fontSize: 20);
-  }
-}
-
-class _ResultDisplay extends HookWidget {
-  const _ResultDisplay({
-    this.postureHistory = const [],
-    this.postureBaseline,
-  });
-
-  final List<AttitudeData> postureHistory;
-  final AttitudeData? postureBaseline;
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = useAnimationController(
-      duration: const Duration(seconds: 3),
-    );
-    final showCard = useState(false);
-
-    useEffect(() {
-      controller.forward().then((_) {
-        Future.delayed(const Duration(seconds: 3), () {
-          showCard.value = true;
-        });
-      });
-      return null;
-    }, []);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: SizedBox(
-        width: double.infinity,
-        height: HanshiPainter.maxSwayPx * 2 + 24,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: controller,
-                builder: (context, _) => CustomPaint(
-                  painter: HanshiPainter(
-                    progress: controller.value,
-                    postureHistory: postureHistory,
-                    postureBaseline: postureBaseline,
-                  ),
-                ),
-              ),
-            ),
-            AnimatedOpacity(
-              opacity: showCard.value ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 800),
-              child: OverflowBox(
-                maxWidth: double.infinity,
-                child: const _KotowazaCard(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _KotowazaCard extends StatelessWidget {
-  const _KotowazaCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFAEEEE),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFD9C8C8)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              '日日是好日',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 32,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              '（にちにちこれこうじつ）',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _toKanjiDate(DateTime.now()),
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 15,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
-String _toKanjiDate(DateTime date) {
-  const digits = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-  final year = date.year
-      .toString()
-      .split('')
-      .map((d) => digits[int.parse(d)])
-      .join();
-  return '$year年　${_toKanjiNumber(date.month)}月${_toKanjiNumber(date.day)}日';
-}
-
-String _toKanjiNumber(int n) {
-  const digits = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-  if (n <= 9) return digits[n];
-  if (n == 10) return '十';
-  if (n < 20) return '十${digits[n - 10]}';
-  if (n == 20) return '二十';
-  if (n < 30) return '二十${digits[n - 20]}';
-  if (n == 30) return '三十';
-  return '三十${digits[n - 30]}';
 }
