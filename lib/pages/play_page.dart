@@ -7,9 +7,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:xen2/features/imu/imu_service.dart';
 import 'package:xen2/features/zazen/koans.dart';
 import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
+import 'package:xen2/features/zazen/zazen_duration_provider.dart';
 import 'package:xen2/features/zazen/play_flow/countdown_display.dart';
 import 'package:xen2/features/zazen/play_flow/eyes_half_closed.dart';
-import 'package:xen2/features/zazen/play_flow/katsu.dart';
 import 'package:xen2/features/zazen/play_flow/koan_display.dart';
 import 'package:xen2/features/zazen/play_flow/posture_confirmed.dart';
 import 'package:xen2/features/zazen/play_flow/posture_detecting.dart';
@@ -96,11 +96,13 @@ class PlayPageState extends ConsumerState<PlayPage> {
     await Future.delayed(const Duration(seconds: 9));
     // todo: ループ時に音が途切れないようにしたい
     await _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.25);
-    await Future.delayed(const Duration(seconds: 30));
+
+    final zazenDuration = ref.read(zazenDurationProvider);
+    await Future.delayed(Duration(minutes: zazenDuration));
 
     // 喝（Pavlokへ通信して刺激を与える）
-    foregroundWidget.value = const Katsu();
-    await Future.delayed(const Duration(seconds: 30));
+    // foregroundWidget.value = const Katsu();
+    // await Future.delayed(const Duration(seconds: 30));
 
     // 坐禅終了（動画と音声を停止）+ サンプリング停止
     _samplingTimer?.cancel();
