@@ -41,7 +41,7 @@ final class ZazenDurationProvider
   }
 }
 
-String _$zazenDurationHash() => r'd2a2578cb9abfaa14b319b60802d8b93229ea3fd';
+String _$zazenDurationHash() => r'fc00cc1fe76378b8dd83d2126067934f965de53a';
 
 abstract class _$ZazenDuration extends $Notifier<int> {
   int build();
