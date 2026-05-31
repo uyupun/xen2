@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:xen2/features/imu/imu_service.dart';
+import 'package:xen2/features/zazen/koans.dart';
 import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
 import 'package:xen2/features/zazen/play_flow/katsu.dart';
+import 'package:xen2/features/zazen/play_flow/koan_display.dart';
 import 'package:xen2/features/zazen/play_flow/posture_confirmed.dart';
 import 'package:xen2/features/zazen/play_flow/posture_detecting.dart';
 import 'package:xen2/features/zazen/play_flow/result_display.dart';
@@ -63,7 +65,11 @@ class PlayPageState extends ConsumerState<PlayPage> {
     // キャリブレーション完了 + ベースライン記録
     _postureBaseline = _latestAttitude;
     foregroundWidget.value = const PostureConfirmed();
-    await Future.delayed(const Duration(seconds: 5));
+    await Future.delayed(const Duration(seconds: 3));
+
+    // 公案をランダムに表示
+    foregroundWidget.value = KoanDisplay(koan: randomKoan());
+    await Future.delayed(const Duration(seconds: 10));
 
     // 坐禅開始（動画と音声を再生）+ 1秒ごとにサンプリング開始
     foregroundWidget.value = const ZazenInProgress();
