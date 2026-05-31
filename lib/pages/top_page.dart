@@ -15,40 +15,45 @@ class TopPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+      body: SafeArea(
+        child: Stack(
           children: [
-            const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Xen',
-                  style: TextStyle(fontSize: 48, height: 1, letterSpacing: 10),
-                ),
-                Text('Extreme Xen', style: TextStyle(fontSize: 14, height: 1)),
-              ],
-            ),
-            SizedBox(
-              width: 400,
-              child: GradientSlider(
-                value: duration,
-                onChanged: (minutes) {
-                  ref.read(zazenDurationProvider.notifier).update(minutes);
-                },
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // GradientSliderが中央に来るようにするためのスペーサー
+                  SizedBox(),
+                  SizedBox(
+                    width: 400,
+                    child: GradientSlider(
+                      value: duration,
+                      onChanged: (minutes) {
+                        ref
+                            .read(zazenDurationProvider.notifier)
+                            .update(minutes);
+                      },
+                    ),
+                  ),
+                  SizedBox(
+                    width: 400,
+                    child: PrimaryButton(
+                      label: '禅',
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PlayPage()),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(
-              width: 250,
-              child: PrimaryButton(
-                label: '禅',
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PlayPage()),
-                  );
-                },
-              ),
+            Positioned(
+              top: 16,
+              left: 16,
+              child: Image.asset('assets/logo_text.png', width: 150),
             ),
           ],
         ),
