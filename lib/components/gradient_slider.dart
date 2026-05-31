@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:xen2/constants/app_colors.dart';
 
 class GradientSlider extends StatelessWidget {
   const GradientSlider({
@@ -21,19 +22,29 @@ class GradientSlider extends StatelessWidget {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            const Text('時間', style: TextStyle(fontSize: 16)),
+            Text(
+              '時間',
+              style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
+            ),
             RichText(
               text: TextSpan(
-                style: DefaultTextStyle.of(context).style,
                 children: [
                   TextSpan(
                     text: '$value',
-                    style: const TextStyle(fontSize: 48, height: 1),
+                    style: TextStyle(
+                      fontSize: 48,
+                      height: 1,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                  const TextSpan(
+                  TextSpan(
                     text: '分',
-                    style: TextStyle(fontSize: 16),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -44,14 +55,14 @@ class GradientSlider extends StatelessWidget {
           data: SliderThemeData(
             trackHeight: 8,
             trackShape: _GradientTrackShape(),
-            thumbColor: Colors.white,
+            thumbColor: AppColors.background,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-            overlayColor: Colors.grey.withValues(alpha: 0.2),
+            overlayColor: AppColors.textPrimary.withValues(alpha: 0.2),
             showValueIndicator: ShowValueIndicator.onDrag,
-            valueIndicatorColor: const Color(0xFF9F80BE),
-            valueIndicatorTextStyle: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
+            valueIndicatorColor: AppColors.primary,
+            valueIndicatorTextStyle: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
             ),
           ),
           child: Slider(
@@ -67,11 +78,11 @@ class GradientSlider extends StatelessWidget {
           children: [
             Text(
               '初級（$min分）',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
             ),
             Text(
               '上級（$max分）',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
             ),
           ],
         ),
@@ -119,13 +130,10 @@ class _GradientTrackShape extends SliderTrackShape {
 
     final paint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFF4CAF50), Color(0xFFFFEB3B), Color(0xFFF44336)],
+        colors: [Color(0xFF44D85A), Color(0xFFED9237), Color(0xFFCE2626)],
       ).createShader(trackRect);
 
     final radius = Radius.circular(trackRect.height / 2);
-    context.canvas.drawRRect(
-      RRect.fromRectAndRadius(trackRect, radius),
-      paint,
-    );
+    context.canvas.drawRRect(RRect.fromRectAndRadius(trackRect, radius), paint);
   }
 }
