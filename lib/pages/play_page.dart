@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:xen2/components/outlined_text.dart';
 import 'package:xen2/features/imu/imu_service.dart';
 import 'package:xen2/features/zazen/koans.dart';
 import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
@@ -11,6 +12,7 @@ import 'package:xen2/features/zazen/zazen_duration_provider.dart';
 import 'package:xen2/features/zazen/play_flow/countdown_display.dart';
 import 'package:xen2/features/zazen/play_flow/eyes_half_closed.dart';
 import 'package:xen2/features/zazen/play_flow/koan_display.dart';
+import 'package:xen2/features/zazen/play_flow/zazen_ended.dart';
 import 'package:xen2/features/zazen/play_flow/posture_confirmed.dart';
 import 'package:xen2/features/zazen/play_flow/posture_detecting.dart';
 import 'package:xen2/features/zazen/play_flow/result_display.dart';
@@ -60,7 +62,10 @@ class PlayPageState extends ConsumerState<PlayPage> {
     super.dispose();
   }
 
-  Future<void> _runZazenFlow(ValueNotifier<Widget> foregroundWidget) async {
+  Future<void> _runZazenFlow(
+    ValueNotifier<Widget> foregroundWidget,
+    ValueNotifier<bool> showTapOverlay,
+  ) async {
     // キャリブレーション（VRゴーグル装着＋正面向きを5秒間維持で完了）
     await ref.read(zazenCalibrationProvider.notifier).start();
 
@@ -114,21 +119,23 @@ class PlayPageState extends ConsumerState<PlayPage> {
       AssetSource('assets/temple_bell_end.mp3'),
       volume: 0.5,
     );
-    await Future.delayed(const Duration(seconds: 3));
 
-    // リザルト画面の表示
-    foregroundWidget.value = ResultDisplay(
-      postureHistory: List.unmodifiable(_postureHistory),
-      postureBaseline: _postureBaseline,
-    );
+    // 終了メッセージ（step 7）
+    foregroundWidget.value = const ZazenEnded();
+    await Future.delayed(const Duration(seconds: 5));
+
+    // タップ待ち（step 8）: VRテキストを非表示にして全画面でタップ案内
+    foregroundWidget.value = const SizedBox.shrink();
+    showTapOverlay.value = true;
   }
 
   @override
   Widget build(BuildContext context) {
     final foregroundWidget = useState<Widget>(const PostureDetecting());
+    final showTapOverlay = useState(false);
 
     useEffect(() {
-      _runZazenFlow(foregroundWidget);
+      _runZazenFlow(foregroundWidget, showTapOverlay);
 
       return null;
     }, []);
@@ -140,6 +147,26 @@ class PlayPageState extends ConsumerState<PlayPage> {
             assetPath: 'assets/skybox.mp4',
             foregroundWidget: foregroundWidget.value,
           ),
+          // step 8: タップ待ち（全画面・非VR分割）
+          if (showTapOverlay.value)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  showTapOverlay.value = false;
+                  // step 9: リザルト表示
+                  foregroundWidget.value = ResultDisplay(
+                    postureHistory: List.unmodifiable(_postureHistory),
+                    postureBaseline: _postureBaseline,
+                  );
+                },
+                child: const ColoredBox(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: OutlinedText(text: 'タップしてください', fontSize: 20),
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             top: 16,
             right: 16,
