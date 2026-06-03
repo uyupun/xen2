@@ -9,8 +9,10 @@ import 'package:xen2/features/imu/imu_service.dart';
 import 'package:xen2/features/zazen/koans.dart';
 import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
 import 'package:xen2/features/zazen/zazen_duration_provider.dart';
+import 'package:xen2/features/zazen/zazen_katsu_provider.dart';
 import 'package:xen2/features/zazen/play_flow/countdown_display.dart';
 import 'package:xen2/features/zazen/play_flow/eyes_half_closed.dart';
+import 'package:xen2/features/zazen/play_flow/katsu.dart';
 import 'package:xen2/features/zazen/play_flow/koan_display.dart';
 import 'package:xen2/features/zazen/play_flow/zazen_ended.dart';
 import 'package:xen2/features/zazen/play_flow/posture_confirmed.dart';
@@ -88,9 +90,10 @@ class PlayPageState extends ConsumerState<PlayPage> {
       await Future.delayed(const Duration(seconds: 1));
     }
 
-    // 坐禅開始（動画と音声を再生）+ 1秒ごとにサンプリング開始
+    // 坐禅開始（動画と音声を再生）+ サンプリング + 喝の監視を開始
     foregroundWidget.value = const ZazenInProgress();
     ref.read(dualVrPlayerControllerProvider.notifier).play();
+    ref.read(zazenKatsuProvider.notifier).start();
     _samplingTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       if (_latestAttitude != null) _postureHistory.add(_latestAttitude!);
     });
@@ -105,9 +108,7 @@ class PlayPageState extends ConsumerState<PlayPage> {
     final zazenDuration = ref.read(zazenDurationProvider);
     await Future.delayed(Duration(minutes: zazenDuration));
 
-    // 喝（Pavlokへ通信して刺激を与える）
-    // foregroundWidget.value = const Katsu();
-    // await Future.delayed(const Duration(seconds: 30));
+    ref.read(zazenKatsuProvider.notifier).stop();
 
     // 坐禅終了（動画と音声を停止）+ サンプリング停止
     _samplingTimer?.cancel();
@@ -133,6 +134,14 @@ class PlayPageState extends ConsumerState<PlayPage> {
   Widget build(BuildContext context) {
     final foregroundWidget = useState<Widget>(const PostureDetecting());
     final showTapOverlay = useState(false);
+
+    ref.listen(zazenKatsuProvider, (prev, next) {
+      if (next == KatsuStatus.warning) {
+        foregroundWidget.value = const Katsu();
+      } else if (prev == KatsuStatus.warning) {
+        foregroundWidget.value = const ZazenInProgress();
+      }
+    });
 
     useEffect(() {
       _runZazenFlow(foregroundWidget, showTapOverlay);
