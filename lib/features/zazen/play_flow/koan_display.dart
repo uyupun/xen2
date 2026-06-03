@@ -15,10 +15,7 @@ class KoanDisplay extends StatelessWidget {
         OutlinedText(text: koan.ruby, fontSize: 10),
         OutlinedText(text: koan.character, fontSize: 20),
         const SizedBox(height: 12),
-        SizedBox(
-          width: 200,
-          child: OutlinedText(text: koan.description, fontSize: 14),
-        ),
+        OutlinedText(text: koan.description, fontSize: 14),
       ],
     );
   }

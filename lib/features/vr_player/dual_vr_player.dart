@@ -133,7 +133,12 @@ class _DualVrPlayerState extends ConsumerState<DualVrPlayer> {
           top: 0,
           width: halfWidth,
           height: size.height,
-          child: Center(child: widget.foregroundWidget),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: widget.foregroundWidget,
+            ),
+          ),
         ),
         // 右側テキスト
         Positioned(
@@ -141,7 +146,12 @@ class _DualVrPlayerState extends ConsumerState<DualVrPlayer> {
           top: 0,
           width: halfWidth,
           height: size.height,
-          child: Center(child: widget.foregroundWidget),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: widget.foregroundWidget,
+            ),
+          ),
         ),
       ],
     );
