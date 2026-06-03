@@ -25,7 +25,7 @@ final class DualVrPlayerControllerNotifierProvider
         argument: null,
         retry: null,
         name: r'dualVrPlayerControllerProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -47,7 +47,7 @@ final class DualVrPlayerControllerNotifierProvider
 }
 
 String _$dualVrPlayerControllerNotifierHash() =>
-    r'600cab4efb177f03c9b9472b63599e4ef40c9198';
+    r'67f8bbcff1f7f6f984b5d9c3a7668c837fdfa286';
 
 abstract class _$DualVrPlayerControllerNotifier
     extends $Notifier<DualVrPlayerController?> {

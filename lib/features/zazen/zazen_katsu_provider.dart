@@ -34,6 +34,7 @@ class ZazenKatsu extends _$ZazenKatsu {
   }
 
   void start() {
+    _sub?.cancel();
     _inRangeSince = null;
     state = KatsuStatus.idle;
     _sub = ImuService.instance.attitudeStream.listen(_onData);

@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'zazen_katsu_provider.dart';
+part of 'zazen_flow_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,51 +9,51 @@ part of 'zazen_katsu_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(ZazenKatsu)
-final zazenKatsuProvider = ZazenKatsuProvider._();
+@ProviderFor(ZazenFlow)
+final zazenFlowProvider = ZazenFlowProvider._();
 
-final class ZazenKatsuProvider
-    extends $NotifierProvider<ZazenKatsu, KatsuStatus> {
-  ZazenKatsuProvider._()
+final class ZazenFlowProvider
+    extends $NotifierProvider<ZazenFlow, ZazenFlowState> {
+  ZazenFlowProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'zazenKatsuProvider',
+        name: r'zazenFlowProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$zazenKatsuHash();
+  String debugGetCreateSourceHash() => _$zazenFlowHash();
 
   @$internal
   @override
-  ZazenKatsu create() => ZazenKatsu();
+  ZazenFlow create() => ZazenFlow();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(KatsuStatus value) {
+  Override overrideWithValue(ZazenFlowState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<KatsuStatus>(value),
+      providerOverride: $SyncValueProvider<ZazenFlowState>(value),
     );
   }
 }
 
-String _$zazenKatsuHash() => r'4d5cc8a67411acff519098ff68145f9e8a6dd2be';
+String _$zazenFlowHash() => r'8d332e31e72a2ec61030277bbd072269716f9d1d';
 
-abstract class _$ZazenKatsu extends $Notifier<KatsuStatus> {
-  KatsuStatus build();
+abstract class _$ZazenFlow extends $Notifier<ZazenFlowState> {
+  ZazenFlowState build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<KatsuStatus, KatsuStatus>;
+    final ref = this.ref as $Ref<ZazenFlowState, ZazenFlowState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<KatsuStatus, KatsuStatus>,
-              KatsuStatus,
+              AnyNotifier<ZazenFlowState, ZazenFlowState>,
+              ZazenFlowState,
               Object?,
               Object?
             >;
