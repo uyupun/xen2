@@ -41,7 +41,7 @@ final class ZazenCalibrationProvider
   }
 }
 
-String _$zazenCalibrationHash() => r'b107a212746472b896d22b5749347146574cdf94';
+String _$zazenCalibrationHash() => r'058fda72f4366910e2292ff2a12af434f5e0e194';
 
 abstract class _$ZazenCalibration extends $Notifier<CalibrationStatus> {
   CalibrationStatus build();
