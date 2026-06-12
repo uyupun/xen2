@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'zazen_duration_provider.dart';
+part of 'zazen_katsu_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,51 +9,51 @@ part of 'zazen_duration_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(ZazenDuration)
-final zazenDurationProvider = ZazenDurationProvider._();
+@ProviderFor(ZazenKatsu)
+final zazenKatsuProvider = ZazenKatsuProvider._();
 
-final class ZazenDurationProvider
-    extends $NotifierProvider<ZazenDuration, int> {
-  ZazenDurationProvider._()
+final class ZazenKatsuProvider
+    extends $NotifierProvider<ZazenKatsu, KatsuStatus> {
+  ZazenKatsuProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'zazenDurationProvider',
+        name: r'zazenKatsuProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$zazenDurationHash();
+  String debugGetCreateSourceHash() => _$zazenKatsuHash();
 
   @$internal
   @override
-  ZazenDuration create() => ZazenDuration();
+  ZazenKatsu create() => ZazenKatsu();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
+  Override overrideWithValue(KatsuStatus value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
+      providerOverride: $SyncValueProvider<KatsuStatus>(value),
     );
   }
 }
 
-String _$zazenDurationHash() => r'fc00cc1fe76378b8dd83d2126067934f965de53a';
+String _$zazenKatsuHash() => r'4d5cc8a67411acff519098ff68145f9e8a6dd2be';
 
-abstract class _$ZazenDuration extends $Notifier<int> {
-  int build();
+abstract class _$ZazenKatsu extends $Notifier<KatsuStatus> {
+  KatsuStatus build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<int, int>;
+    final ref = this.ref as $Ref<KatsuStatus, KatsuStatus>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<int, int>,
-              int,
+              AnyNotifier<KatsuStatus, KatsuStatus>,
+              KatsuStatus,
               Object?,
               Object?
             >;

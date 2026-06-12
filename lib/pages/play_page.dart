@@ -5,12 +5,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:xen2/components/outlined_text.dart';
-import 'package:xen2/constants/app_colors.dart';
 import 'package:xen2/features/imu/imu_service.dart';
-import 'package:xen2/features/pavlok/pavlok_provider.dart';
-import 'package:xen2/features/zazen/hanshi_painter.dart';
+import 'package:xen2/features/zazen/zazen_flow_provider.dart';
+import 'package:xen2/features/zazen/zazen_katsu_provider.dart';
+import 'package:xen2/features/zazen/play_flow/close_dialog.dart';
+import 'package:xen2/features/zazen/play_flow/countdown_display.dart';
+import 'package:xen2/features/zazen/play_flow/eyes_half_closed.dart';
+import 'package:xen2/features/zazen/play_flow/katsu.dart';
+import 'package:xen2/features/zazen/play_flow/koan_display.dart';
+import 'package:xen2/features/zazen/play_flow/posture_confirmed.dart';
+import 'package:xen2/features/zazen/play_flow/posture_detecting.dart';
+import 'package:xen2/features/zazen/play_flow/zazen_ended.dart';
+import 'package:xen2/features/zazen/play_flow/zazen_in_progress.dart';
 import 'package:xen2/features/vr_player/dual_vr_player.dart';
 import 'package:xen2/features/vr_player/dual_vr_player_controller_notifier_provider.dart';
+import 'package:xen2/pages/result_page.dart';
 import 'package:xen2/pages/top_page.dart';
 
 class PlayPage extends StatefulHookConsumerWidget {
@@ -20,19 +29,36 @@ class PlayPage extends StatefulHookConsumerWidget {
   PlayPageState createState() => PlayPageState();
 }
 
-class PlayPageState extends ConsumerState<PlayPage> {
+class PlayPageState extends ConsumerState<PlayPage>
+    with WidgetsBindingObserver {
   late AudioPlayer _bgmPlayer;
   late AudioPlayer _bellPlayer;
+
+  late DualVrPlayerControllerNotifier _vrControllerNotifier;
+  late ZazenFlow _zazenFlowNotifier;
 
   AttitudeData? _latestAttitude;
   AttitudeData? _postureBaseline;
   final List<AttitudeData> _postureHistory = [];
   StreamSubscription<AttitudeData>? _attitudeSub;
   Timer? _samplingTimer;
+  Timer? _bgmStartTimer;
+  bool _bgmActive = false;
+  DateTime? _bgmStartScheduledAt;
+  Duration? _bgmStartDelay;
+  Duration? _bgmStartRemaining;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _vrControllerNotifier = ref.read(dualVrPlayerControllerProvider.notifier);
+    _zazenFlowNotifier = ref.read(zazenFlowProvider.notifier);
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bgmPlayer = AudioPlayer();
     _bgmPlayer.audioCache.prefix = '';
     _bgmPlayer.setReleaseMode(ReleaseMode.loop);
@@ -45,70 +71,185 @@ class PlayPageState extends ConsumerState<PlayPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _bgmPlayer.stop();
     _bgmPlayer.dispose();
     _bellPlayer.stop();
     _bellPlayer.dispose();
     _attitudeSub?.cancel();
     _samplingTimer?.cancel();
+    _bgmStartTimer?.cancel();
+    _vrControllerNotifier.pause();
+    _zazenFlowNotifier.reset();
     super.dispose();
   }
 
-  Future<void> _runZazenFlow(ValueNotifier<Widget> foregroundWidget) async {
-    // 姿勢の検証
-    await Future.delayed(const Duration(seconds: 20));
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+        _onAppPaused();
+      case AppLifecycleState.resumed:
+        _onAppResumed();
+      default:
+        break;
+    }
+  }
 
-    // 検証完了 + ベースライン記録
-    _postureBaseline = _latestAttitude;
-    foregroundWidget.value = const _PostureConfirmed();
-    await Future.delayed(const Duration(seconds: 5));
+  void _onAppPaused() {
+    _zazenFlowNotifier.pause();
+    _samplingTimer?.cancel();
+    _pauseBgm();
+  }
 
-    // 坐禅開始（動画と音声を再生）+ 1秒ごとにサンプリング開始
-    foregroundWidget.value = const _ZazenInProgress();
-    ref.read(dualVrPlayerControllerProvider.notifier).play();
+  void _onAppResumed() {
+    _zazenFlowNotifier.resume();
+    final phase = ref.read(zazenFlowProvider).phase;
+    // 再開カウントダウン中はカウントダウン終了時にBGMを再開する
+    if (phase == ZazenFlowPhase.resumeCountdown) return;
+    _resumeBgm();
+    if (phase == ZazenFlowPhase.inProgress) {
+      _startSampling();
+    }
+  }
+
+  void _showCloseDialog(BuildContext context) {
+    _zazenFlowNotifier.pause();
+    _samplingTimer?.cancel();
+    _pauseBgm();
+
+    final navigator = Navigator.of(context);
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => CloseDialog(
+        onContinue: () => Navigator.pop(ctx, false),
+        onExit: () => Navigator.pop(ctx, true),
+      ),
+    ).then((shouldExit) {
+      if (!mounted) return;
+      if (shouldExit == true) {
+        navigator.pushReplacement(
+          MaterialPageRoute(builder: (_) => const TopPage()),
+        );
+      } else {
+        // 坐禅中の場合はカウントダウンを挟んで再開する
+        _zazenFlowNotifier.resumeWithCountdown();
+        // 再開カウントダウン中はカウントダウン終了時にBGMを再開する
+        if (ref.read(zazenFlowProvider).phase != ZazenFlowPhase.resumeCountdown) {
+          _resumeBgm();
+        }
+      }
+    });
+  }
+
+  void _scheduleBgmStart(Duration delay) {
+    _bgmStartTimer?.cancel();
+    _bgmStartScheduledAt = DateTime.now();
+    _bgmStartDelay = delay;
+    _bgmStartTimer = Timer(delay, () {
+      _bgmActive = true;
+      _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.25);
+    });
+  }
+
+  void _pauseBgm() {
+    // BGM開始前に中断された場合は残り時間を保存して再開時に復元する
+    if (_bgmStartTimer?.isActive ?? false) {
+      final elapsed = DateTime.now().difference(_bgmStartScheduledAt!);
+      final remaining = _bgmStartDelay! - elapsed;
+      _bgmStartRemaining = remaining.isNegative ? Duration.zero : remaining;
+    }
+    _bgmStartTimer?.cancel();
+    if (_bgmActive) _bgmPlayer.pause();
+  }
+
+  void _resumeBgm() {
+    if (_bgmActive) {
+      _bgmPlayer.resume();
+    } else if (_bgmStartRemaining != null) {
+      _scheduleBgmStart(_bgmStartRemaining!);
+      _bgmStartRemaining = null;
+    }
+  }
+
+  void _onPhaseChanged(ZazenFlowPhase? prev, ZazenFlowPhase next) {
+    switch (next) {
+      case ZazenFlowPhase.postureConfirmed:
+        _postureBaseline = _latestAttitude;
+      case ZazenFlowPhase.inProgress:
+        // 中断からの再開時は鐘を再度再生せず、BGMを再開する
+        if (prev == ZazenFlowPhase.resumeCountdown) {
+          _startSampling();
+          _resumeBgm();
+          return;
+        }
+        _vrControllerNotifier.play();
+        _startSampling();
+        _bellPlayer.play(
+          AssetSource('assets/temple_bell_start.mp3'),
+          volume: 0.5,
+        );
+        _scheduleBgmStart(const Duration(seconds: 9));
+      case ZazenFlowPhase.ended:
+        _bgmStartTimer?.cancel();
+        _bgmStartRemaining = null;
+        _bgmActive = false;
+        _samplingTimer?.cancel();
+        _samplingTimer = null;
+        _vrControllerNotifier.pause();
+        _bgmPlayer.stop();
+        _bellPlayer.play(
+          AssetSource('assets/temple_bell_end.mp3'),
+          volume: 0.5,
+        );
+      default:
+        break;
+    }
+  }
+
+  void _startSampling() {
+    _samplingTimer?.cancel();
     _samplingTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       if (_latestAttitude != null) _postureHistory.add(_latestAttitude!);
     });
-    await _bellPlayer.play(
-      AssetSource('assets/temple_bell_start.mp3'),
-      volume: 0.5,
-    );
-    await Future.delayed(const Duration(seconds: 9));
-    // todo: ループ時に音が途切れないようにしたい
-    await _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.25);
-    await Future.delayed(const Duration(seconds: 30));
+  }
 
-    // 喝（Pavlokへ通信して刺激を与える）
-    foregroundWidget.value = const _Katsu();
-    await Future.delayed(const Duration(seconds: 30));
+  Widget _buildForegroundWidget(ZazenFlowState flow, KatsuStatus katsu) {
+    if (katsu == KatsuStatus.warning &&
+        flow.phase == ZazenFlowPhase.inProgress) {
+      return const Katsu();
+    }
 
-    // 坐禅終了（動画と音声を停止）+ サンプリング停止
-    _samplingTimer?.cancel();
-    _samplingTimer = null;
-    ref.read(dualVrPlayerControllerProvider.notifier).pause();
-    await _bgmPlayer.stop();
-    await _bellPlayer.stop();
-    await _bellPlayer.play(
-      AssetSource('assets/temple_bell_end.mp3'),
-      volume: 0.5,
-    );
-    await Future.delayed(const Duration(seconds: 3));
-
-    // リザルト画面の表示
-    foregroundWidget.value = _ResultDisplay(
-      postureHistory: List.unmodifiable(_postureHistory),
-      postureBaseline: _postureBaseline,
-    );
+    return switch (flow.phase) {
+      ZazenFlowPhase.idle => const SizedBox.shrink(),
+      ZazenFlowPhase.calibrating => const PostureDetecting(),
+      ZazenFlowPhase.postureConfirmed => const PostureConfirmed(),
+      ZazenFlowPhase.koan =>
+        flow.koan != null
+            ? KoanDisplay(koan: flow.koan!)
+            : const SizedBox.shrink(),
+      ZazenFlowPhase.eyesHalfClosed => const EyesHalfClosed(),
+      ZazenFlowPhase.countdown => CountdownDisplay(count: flow.countdownValue),
+      ZazenFlowPhase.inProgress => const ZazenInProgress(),
+      ZazenFlowPhase.resumeCountdown => CountdownDisplay(
+        count: flow.countdownValue,
+      ),
+      ZazenFlowPhase.ended => const ZazenEnded(),
+      ZazenFlowPhase.tapWaiting => const SizedBox.shrink(),
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    final foregroundWidget = useState<Widget>(const _PostureDetecting());
+    final flowState = ref.watch(zazenFlowProvider);
+    final katsuStatus = ref.watch(zazenKatsuProvider);
+
+    ref.listen(zazenFlowProvider.select((s) => s.phase), _onPhaseChanged);
 
     useEffect(() {
-      _runZazenFlow(foregroundWidget);
-
-      return null;
+      _zazenFlowNotifier.start();
+      return _zazenFlowNotifier.reset;
     }, []);
 
     return Scaffold(
@@ -116,221 +257,40 @@ class PlayPageState extends ConsumerState<PlayPage> {
         children: [
           DualVrPlayer(
             assetPath: 'assets/skybox.mp4',
-            foregroundWidget: foregroundWidget.value,
+            foregroundWidget: _buildForegroundWidget(flowState, katsuStatus),
           ),
-          Positioned(
-            top: 16,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const TopPage()),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PostureDetecting extends StatelessWidget {
-  const _PostureDetecting();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        OutlinedText(text: 'VRゴーグルを装着して\n坐禅の姿勢でお待ちください', fontSize: 20),
-        SizedBox(height: 8),
-        OutlinedText(text: '検知中...', fontSize: 14),
-      ],
-    );
-  }
-}
-
-class _PostureConfirmed extends StatelessWidget {
-  const _PostureConfirmed();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        OutlinedText(text: '姿勢を確認しました', fontSize: 20),
-        SizedBox(height: 8),
-        OutlinedText(text: 'まもなく開始します', fontSize: 14),
-      ],
-    );
-  }
-}
-
-class _ZazenInProgress extends StatelessWidget {
-  const _ZazenInProgress();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
-
-class _Katsu extends HookConsumerWidget {
-  const _Katsu();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final countdown = useState(3);
-    useEffect(() {
-      if (countdown.value >= 0) {
-        Future.delayed(const Duration(seconds: 1), () async {
-          countdown.value -= 1;
-          if (countdown.value == 0) {
-            ref.read(pavlokProvider.future).catchError((e) {
-              debugPrint('Failed to connect to Pavlok: $e');
-            });
-          }
-        });
-      }
-      return null;
-    }, [countdown.value]);
-
-    final text = countdown.value > 0 ? '警策を行います: ${countdown.value}' : '';
-
-    return OutlinedText(text: text, fontSize: 20);
-  }
-}
-
-class _ZazenEnding extends StatelessWidget {
-  const _ZazenEnding();
-
-  @override
-  Widget build(BuildContext context) {
-    return const OutlinedText(text: '終了', fontSize: 20);
-  }
-}
-
-class _ResultDisplay extends HookWidget {
-  const _ResultDisplay({
-    this.postureHistory = const [],
-    this.postureBaseline,
-  });
-
-  final List<AttitudeData> postureHistory;
-  final AttitudeData? postureBaseline;
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = useAnimationController(
-      duration: const Duration(seconds: 3),
-    );
-    final showCard = useState(false);
-
-    useEffect(() {
-      controller.forward().then((_) {
-        Future.delayed(const Duration(seconds: 3), () {
-          showCard.value = true;
-        });
-      });
-      return null;
-    }, []);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: SizedBox(
-        width: double.infinity,
-        height: HanshiPainter.maxSwayPx * 2 + 24,
-        child: Stack(
-          children: [
+          if (flowState.phase == ZazenFlowPhase.tapWaiting)
             Positioned.fill(
-              child: AnimatedBuilder(
-                animation: controller,
-                builder: (context, _) => CustomPaint(
-                  painter: HanshiPainter(
-                    progress: controller.value,
-                    postureHistory: postureHistory,
-                    postureBaseline: postureBaseline,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => ResultPage(
+                      postureHistory: List.unmodifiable(_postureHistory),
+                      postureBaseline: _postureBaseline,
+                    ),
+                  ),
+                ),
+                child: const ColoredBox(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: OutlinedText(text: 'タップしてください', fontSize: 20),
                   ),
                 ),
               ),
             ),
-            AnimatedOpacity(
-              opacity: showCard.value ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 800),
-              child: OverflowBox(
-                maxWidth: double.infinity,
-                child: const _KotowazaCard(),
+          // 坐禅終了後は中断ダイアログを表示しない
+          if (flowState.phase != ZazenFlowPhase.ended &&
+              flowState.phase != ZazenFlowPhase.tapWaiting)
+            Positioned(
+              top: 16,
+              right: 16,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => _showCloseDialog(context),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
-}
-
-class _KotowazaCard extends StatelessWidget {
-  const _KotowazaCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFAEEEE),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFD9C8C8)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              '日日是好日',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 32,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              '（にちにちこれこうじつ）',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _toKanjiDate(DateTime.now()),
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 15,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
-String _toKanjiDate(DateTime date) {
-  const digits = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-  final year = date.year
-      .toString()
-      .split('')
-      .map((d) => digits[int.parse(d)])
-      .join();
-  return '$year年　${_toKanjiNumber(date.month)}月${_toKanjiNumber(date.day)}日';
-}
-
-String _toKanjiNumber(int n) {
-  const digits = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-  if (n <= 9) return digits[n];
-  if (n == 10) return '十';
-  if (n < 20) return '十${digits[n - 10]}';
-  if (n == 20) return '二十';
-  if (n < 30) return '二十${digits[n - 20]}';
-  if (n == 30) return '三十';
-  return '三十${digits[n - 30]}';
 }

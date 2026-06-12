@@ -4,7 +4,7 @@ import 'package:xen2/features/vr_player/dual_vr_player_controller.dart';
 
 part 'dual_vr_player_controller_notifier_provider.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class DualVrPlayerControllerNotifier extends _$DualVrPlayerControllerNotifier {
   @override
   DualVrPlayerController? build() => null;

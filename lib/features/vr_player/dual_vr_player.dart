@@ -22,6 +22,7 @@ class _DualVrPlayerState extends ConsumerState<DualVrPlayer> {
   VrPlayerController? _leftController;
   VrPlayerController? _rightController;
   int _createdCount = 0;
+  late DualVrPlayerControllerNotifier _vrNotifier;
 
   @override
   void initState() {
@@ -29,8 +30,14 @@ class _DualVrPlayerState extends ConsumerState<DualVrPlayer> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _vrNotifier = ref.read(dualVrPlayerControllerProvider.notifier);
+  }
+
+  @override
   void dispose() {
-    ref.read(dualVrPlayerControllerProvider.notifier).detach();
+    Future<void>(() => _vrNotifier.detach());
     _leftController?.dispose();
     _rightController?.dispose();
     super.dispose();
@@ -133,7 +140,12 @@ class _DualVrPlayerState extends ConsumerState<DualVrPlayer> {
           top: 0,
           width: halfWidth,
           height: size.height,
-          child: Center(child: widget.foregroundWidget),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: widget.foregroundWidget,
+            ),
+          ),
         ),
         // 右側テキスト
         Positioned(
@@ -141,7 +153,12 @@ class _DualVrPlayerState extends ConsumerState<DualVrPlayer> {
           top: 0,
           width: halfWidth,
           height: size.height,
-          child: Center(child: widget.foregroundWidget),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: widget.foregroundWidget,
+            ),
+          ),
         ),
       ],
     );

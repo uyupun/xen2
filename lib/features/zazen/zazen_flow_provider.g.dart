@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'zazen_duration_provider.dart';
+part of 'zazen_flow_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,51 +9,51 @@ part of 'zazen_duration_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(ZazenDuration)
-final zazenDurationProvider = ZazenDurationProvider._();
+@ProviderFor(ZazenFlow)
+final zazenFlowProvider = ZazenFlowProvider._();
 
-final class ZazenDurationProvider
-    extends $NotifierProvider<ZazenDuration, int> {
-  ZazenDurationProvider._()
+final class ZazenFlowProvider
+    extends $NotifierProvider<ZazenFlow, ZazenFlowState> {
+  ZazenFlowProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'zazenDurationProvider',
+        name: r'zazenFlowProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$zazenDurationHash();
+  String debugGetCreateSourceHash() => _$zazenFlowHash();
 
   @$internal
   @override
-  ZazenDuration create() => ZazenDuration();
+  ZazenFlow create() => ZazenFlow();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
+  Override overrideWithValue(ZazenFlowState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
+      providerOverride: $SyncValueProvider<ZazenFlowState>(value),
     );
   }
 }
 
-String _$zazenDurationHash() => r'fc00cc1fe76378b8dd83d2126067934f965de53a';
+String _$zazenFlowHash() => r'8d332e31e72a2ec61030277bbd072269716f9d1d';
 
-abstract class _$ZazenDuration extends $Notifier<int> {
-  int build();
+abstract class _$ZazenFlow extends $Notifier<ZazenFlowState> {
+  ZazenFlowState build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<int, int>;
+    final ref = this.ref as $Ref<ZazenFlowState, ZazenFlowState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<int, int>,
-              int,
+              AnyNotifier<ZazenFlowState, ZazenFlowState>,
+              ZazenFlowState,
               Object?,
               Object?
             >;
