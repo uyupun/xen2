@@ -17,33 +17,36 @@ class TopPage extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // GradientSliderが中央に来るようにするためのスペーサー
-              SizedBox(),
-              SizedBox(
-                width: 400,
-                child: GradientSlider(
-                  value: duration,
-                  onChanged: (minutes) {
-                    ref.read(zazenDurationProvider.notifier).update(minutes);
-                  },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // GradientSliderが中央に来るようにするためのスペーサー
+                SizedBox(),
+                SizedBox(
+                  width: 400,
+                  child: GradientSlider(
+                    value: duration,
+                    onChanged: (minutes) {
+                      ref.read(zazenDurationProvider.notifier).update(minutes);
+                    },
+                  ),
                 ),
-              ),
-              SizedBox(
-                width: 400,
-                child: PrimaryButton(
-                  label: '禅',
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PlayPage()),
-                    );
-                  },
+                SizedBox(
+                  width: 400,
+                  child: PrimaryButton(
+                    label: '禅',
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PlayPage()),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
