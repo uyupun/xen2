@@ -8,17 +8,18 @@ import 'package:xen2/components/outlined_text.dart';
 import 'package:xen2/features/imu/imu_service.dart';
 import 'package:xen2/features/zazen/zazen_flow_provider.dart';
 import 'package:xen2/features/zazen/zazen_katsu_provider.dart';
+import 'package:xen2/features/zazen/play_flow/close_dialog.dart';
 import 'package:xen2/features/zazen/play_flow/countdown_display.dart';
 import 'package:xen2/features/zazen/play_flow/eyes_half_closed.dart';
 import 'package:xen2/features/zazen/play_flow/katsu.dart';
 import 'package:xen2/features/zazen/play_flow/koan_display.dart';
 import 'package:xen2/features/zazen/play_flow/posture_confirmed.dart';
 import 'package:xen2/features/zazen/play_flow/posture_detecting.dart';
-import 'package:xen2/features/zazen/play_flow/result_display.dart';
 import 'package:xen2/features/zazen/play_flow/zazen_ended.dart';
 import 'package:xen2/features/zazen/play_flow/zazen_in_progress.dart';
 import 'package:xen2/features/vr_player/dual_vr_player.dart';
 import 'package:xen2/features/vr_player/dual_vr_player_controller_notifier_provider.dart';
+import 'package:xen2/pages/result_page.dart';
 import 'package:xen2/pages/top_page.dart';
 
 class PlayPage extends StatefulHookConsumerWidget {
@@ -43,6 +44,9 @@ class PlayPageState extends ConsumerState<PlayPage>
   Timer? _samplingTimer;
   Timer? _bgmStartTimer;
   bool _bgmActive = false;
+  DateTime? _bgmStartScheduledAt;
+  Duration? _bgmStartDelay;
+  Duration? _bgmStartRemaining;
 
   @override
   void didChangeDependencies() {
@@ -93,17 +97,79 @@ class PlayPageState extends ConsumerState<PlayPage>
   }
 
   void _onAppPaused() {
-    ref.read(zazenFlowProvider.notifier).pause();
-    _bgmStartTimer?.cancel();
+    _zazenFlowNotifier.pause();
     _samplingTimer?.cancel();
-    if (_bgmActive) _bgmPlayer.pause();
+    _pauseBgm();
   }
 
   void _onAppResumed() {
-    ref.read(zazenFlowProvider.notifier).resume();
-    if (_bgmActive) _bgmPlayer.resume();
-    if (ref.read(zazenFlowProvider).phase == ZazenFlowPhase.inProgress) {
+    _zazenFlowNotifier.resume();
+    final phase = ref.read(zazenFlowProvider).phase;
+    // 再開カウントダウン中はカウントダウン終了時にBGMを再開する
+    if (phase == ZazenFlowPhase.resumeCountdown) return;
+    _resumeBgm();
+    if (phase == ZazenFlowPhase.inProgress) {
       _startSampling();
+    }
+  }
+
+  void _showCloseDialog(BuildContext context) {
+    _zazenFlowNotifier.pause();
+    _samplingTimer?.cancel();
+    _pauseBgm();
+
+    final navigator = Navigator.of(context);
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => CloseDialog(
+        onContinue: () => Navigator.pop(ctx, false),
+        onExit: () => Navigator.pop(ctx, true),
+      ),
+    ).then((shouldExit) {
+      if (!mounted) return;
+      if (shouldExit == true) {
+        navigator.pushReplacement(
+          MaterialPageRoute(builder: (_) => const TopPage()),
+        );
+      } else {
+        // 坐禅中の場合はカウントダウンを挟んで再開する
+        _zazenFlowNotifier.resumeWithCountdown();
+        // 再開カウントダウン中はカウントダウン終了時にBGMを再開する
+        if (ref.read(zazenFlowProvider).phase != ZazenFlowPhase.resumeCountdown) {
+          _resumeBgm();
+        }
+      }
+    });
+  }
+
+  void _scheduleBgmStart(Duration delay) {
+    _bgmStartTimer?.cancel();
+    _bgmStartScheduledAt = DateTime.now();
+    _bgmStartDelay = delay;
+    _bgmStartTimer = Timer(delay, () {
+      _bgmActive = true;
+      _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.25);
+    });
+  }
+
+  void _pauseBgm() {
+    // BGM開始前に中断された場合は残り時間を保存して再開時に復元する
+    if (_bgmStartTimer?.isActive ?? false) {
+      final elapsed = DateTime.now().difference(_bgmStartScheduledAt!);
+      final remaining = _bgmStartDelay! - elapsed;
+      _bgmStartRemaining = remaining.isNegative ? Duration.zero : remaining;
+    }
+    _bgmStartTimer?.cancel();
+    if (_bgmActive) _bgmPlayer.pause();
+  }
+
+  void _resumeBgm() {
+    if (_bgmActive) {
+      _bgmPlayer.resume();
+    } else if (_bgmStartRemaining != null) {
+      _scheduleBgmStart(_bgmStartRemaining!);
+      _bgmStartRemaining = null;
     }
   }
 
@@ -112,18 +178,22 @@ class PlayPageState extends ConsumerState<PlayPage>
       case ZazenFlowPhase.postureConfirmed:
         _postureBaseline = _latestAttitude;
       case ZazenFlowPhase.inProgress:
+        // 中断からの再開時は鐘を再度再生せず、BGMを再開する
+        if (prev == ZazenFlowPhase.resumeCountdown) {
+          _startSampling();
+          _resumeBgm();
+          return;
+        }
         _vrControllerNotifier.play();
         _startSampling();
         _bellPlayer.play(
           AssetSource('assets/temple_bell_start.mp3'),
           volume: 0.5,
         );
-        _bgmStartTimer = Timer(const Duration(seconds: 9), () {
-          _bgmActive = true;
-          _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.25);
-        });
+        _scheduleBgmStart(const Duration(seconds: 9));
       case ZazenFlowPhase.ended:
         _bgmStartTimer?.cancel();
+        _bgmStartRemaining = null;
         _bgmActive = false;
         _samplingTimer?.cancel();
         _samplingTimer = null;
@@ -162,12 +232,11 @@ class PlayPageState extends ConsumerState<PlayPage>
       ZazenFlowPhase.eyesHalfClosed => const EyesHalfClosed(),
       ZazenFlowPhase.countdown => CountdownDisplay(count: flow.countdownValue),
       ZazenFlowPhase.inProgress => const ZazenInProgress(),
+      ZazenFlowPhase.resumeCountdown => CountdownDisplay(
+        count: flow.countdownValue,
+      ),
       ZazenFlowPhase.ended => const ZazenEnded(),
       ZazenFlowPhase.tapWaiting => const SizedBox.shrink(),
-      ZazenFlowPhase.result => ResultDisplay(
-        postureHistory: List.unmodifiable(_postureHistory),
-        postureBaseline: _postureBaseline,
-      ),
     };
   }
 
@@ -193,8 +262,14 @@ class PlayPageState extends ConsumerState<PlayPage>
           if (flowState.phase == ZazenFlowPhase.tapWaiting)
             Positioned.fill(
               child: GestureDetector(
-                onTap: () =>
-                    ref.read(zazenFlowProvider.notifier).advanceToResult(),
+                onTap: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => ResultPage(
+                      postureHistory: List.unmodifiable(_postureHistory),
+                      postureBaseline: _postureBaseline,
+                    ),
+                  ),
+                ),
                 child: const ColoredBox(
                   color: Colors.transparent,
                   child: Center(
@@ -203,16 +278,17 @@ class PlayPageState extends ConsumerState<PlayPage>
                 ),
               ),
             ),
-          Positioned(
-            top: 16,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const TopPage()),
+          // 坐禅終了後は中断ダイアログを表示しない
+          if (flowState.phase != ZazenFlowPhase.ended &&
+              flowState.phase != ZazenFlowPhase.tapWaiting)
+            Positioned(
+              top: 16,
+              right: 16,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => _showCloseDialog(context),
               ),
             ),
-          ),
         ],
       ),
     );

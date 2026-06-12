@@ -22,6 +22,7 @@ class ZazenKatsu extends _$ZazenKatsu {
   Timer? _warningTimer;
   Timer? _cooldownTimer;
   int? _inRangeSince;
+  bool _pausedInWarning = false;
 
   @override
   KatsuStatus build() {
@@ -33,10 +34,12 @@ class ZazenKatsu extends _$ZazenKatsu {
     return KatsuStatus.idle;
   }
 
-  void start() {
+  /// [armed]がtrueの場合、姿勢確立済み（detected）の状態から判定を開始する
+  void start({bool armed = false}) {
     _sub?.cancel();
     _inRangeSince = null;
-    state = KatsuStatus.idle;
+    _pausedInWarning = false;
+    state = armed ? KatsuStatus.detected : KatsuStatus.idle;
     _sub = ImuService.instance.attitudeStream.listen(_onData);
   }
 
@@ -45,7 +48,30 @@ class ZazenKatsu extends _$ZazenKatsu {
     _sub = null;
     _warningTimer?.cancel();
     _cooldownTimer?.cancel();
+    _pausedInWarning = false;
     state = KatsuStatus.idle;
+  }
+
+  /// 中断時に警告中だったかどうか
+  bool get pausedInWarning => _pausedInWarning;
+
+  /// 中断用。警告中だった場合は[resumeWarning]で警告からやり直せるよう記録する
+  void pause() {
+    _pausedInWarning = _pausedInWarning || state == KatsuStatus.warning;
+    _sub?.cancel();
+    _sub = null;
+    _warningTimer?.cancel();
+    _cooldownTimer?.cancel();
+    state = KatsuStatus.idle;
+  }
+
+  /// 中断時に警告中だった場合の再開用。警告カウントダウンをやり直して喝を行う
+  void resumeWarning() {
+    _sub?.cancel();
+    _inRangeSince = null;
+    _pausedInWarning = false;
+    _sub = ImuService.instance.attitudeStream.listen(_onData);
+    _enterWarning();
   }
 
   bool _isForward(AttitudeData data) {
@@ -77,23 +103,27 @@ class ZazenKatsu extends _$ZazenKatsu {
 
       case KatsuStatus.detected:
         if (!inRange) {
-          _warningTimer?.cancel();
-          state = KatsuStatus.warning;
-          _warningTimer = Timer(const Duration(seconds: 3), () {
-            // 喝: Pavlokへ刺激を送る
-            ref.read(pavlokProvider.future).catchError((e) {
-              debugPrint('Failed to connect to Pavlok: $e');
-            });
-            state = KatsuStatus.cooldown;
-            _cooldownTimer = Timer(const Duration(seconds: 5), () {
-              state = KatsuStatus.detected;
-            });
-          });
+          _enterWarning();
         }
 
       case KatsuStatus.warning:
       case KatsuStatus.cooldown:
         break;
     }
+  }
+
+  void _enterWarning() {
+    _warningTimer?.cancel();
+    state = KatsuStatus.warning;
+    _warningTimer = Timer(const Duration(seconds: 3), () {
+      // 喝: Pavlokへ刺激を送る
+      ref.read(pavlokProvider.future).catchError((e) {
+        debugPrint('Failed to connect to Pavlok: $e');
+      });
+      state = KatsuStatus.cooldown;
+      _cooldownTimer = Timer(const Duration(seconds: 5), () {
+        state = KatsuStatus.detected;
+      });
+    });
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:xen2/features/imu/imu_service.dart';
 import 'package:xen2/features/zazen/koans.dart';
 import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
 import 'package:xen2/features/zazen/zazen_duration_provider.dart';
@@ -17,9 +18,9 @@ enum ZazenFlowPhase {
   eyesHalfClosed,
   countdown,
   inProgress,
+  resumeCountdown,
   ended,
   tapWaiting,
-  result,
 }
 
 class ZazenFlowState {
@@ -46,15 +47,39 @@ class ZazenFlowState {
 
 @Riverpod(keepAlive: true)
 class ZazenFlow extends _$ZazenFlow {
+  // フェーズタイマー
   Timer? _timer;
   DateTime? _timerStartedAt;
   Duration? _timerDuration;
   VoidCallback? _timerCallback;
   Duration? _savedRemaining;
 
+  // 喝再開タイマー
+  Timer? _katsuResumeTimer;
+
+  // 再開カウントダウンタイマー
+  Timer? _resumeCountdownTimer;
+
+  // IMU・サンプリング（PlayPageから移管）
+  StreamSubscription<AttitudeData>? _imuSub;
+  AttitudeData? _latestAttitude;
+  Timer? _samplingTimer;
+  final List<AttitudeData> _postureHistory = [];
+  AttitudeData? _postureBaseline;
+
+  /// リザルト画面用ゲッター
+  List<AttitudeData> get postureHistory => List.unmodifiable(_postureHistory);
+  AttitudeData? get postureBaseline => _postureBaseline;
+
   @override
   ZazenFlowState build() {
-    ref.onDispose(() => _timer?.cancel());
+    ref.onDispose(() {
+      _timer?.cancel();
+      _katsuResumeTimer?.cancel();
+      _resumeCountdownTimer?.cancel();
+      _samplingTimer?.cancel();
+      _imuSub?.cancel();
+    });
 
     ref.listen(zazenCalibrationProvider, (_, next) {
       if (next == CalibrationStatus.calibrated &&
@@ -69,7 +94,13 @@ class ZazenFlow extends _$ZazenFlow {
   // ---- Public API ----
 
   void start() {
-    _cancelTimers();
+    _cancelAllTimers();
+    _imuSub?.cancel();
+    _postureHistory.clear();
+    _postureBaseline = null;
+    _imuSub = ImuService.instance.attitudeStream.listen((data) {
+      _latestAttitude = data;
+    });
     // ビルドフェーズ中の状態変更を避けるため1フレーム遅延させる
     Future<void>(() {
       ref.read(zazenCalibrationProvider.notifier).reset();
@@ -81,31 +112,47 @@ class ZazenFlow extends _$ZazenFlow {
 
   void pause() {
     _saveTimer();
+    _samplingTimer?.cancel();
+    _katsuResumeTimer?.cancel();
+    _resumeCountdownTimer?.cancel();
     if (state.phase == ZazenFlowPhase.calibrating) {
       ref.read(zazenCalibrationProvider.notifier).reset();
     }
     if (state.phase == ZazenFlowPhase.inProgress) {
-      ref.read(zazenKatsuProvider.notifier).stop();
+      ref.read(zazenKatsuProvider.notifier).pause();
     }
   }
 
   void resume() {
+    if (state.phase == ZazenFlowPhase.resumeCountdown) {
+      _startResumeCountdown();
+      return;
+    }
     _restoreTimer();
     if (state.phase == ZazenFlowPhase.calibrating) {
       ref.read(zazenCalibrationProvider.notifier).start();
     }
     if (state.phase == ZazenFlowPhase.inProgress) {
-      ref.read(zazenKatsuProvider.notifier).start();
+      _startSampling();
+      _resumeKatsu();
     }
   }
 
-  void advanceToResult() {
-    _timer?.cancel();
-    state = state.copyWith(phase: ZazenFlowPhase.result);
+  void resumeWithCountdown() {
+    if (state.phase == ZazenFlowPhase.inProgress ||
+        state.phase == ZazenFlowPhase.resumeCountdown) {
+      _startResumeCountdown();
+    } else {
+      resume();
+    }
   }
 
   void reset() {
-    _cancelTimers();
+    _cancelAllTimers();
+    _imuSub?.cancel();
+    _imuSub = null;
+    _postureHistory.clear();
+    _postureBaseline = null;
     // ビルドフェーズ中の状態変更を避けるため1フレーム遅延させる
     Future<void>(() {
       ref.read(zazenCalibrationProvider.notifier).reset();
@@ -117,6 +164,7 @@ class ZazenFlow extends _$ZazenFlow {
   // ---- Phase transitions ----
 
   void _onCalibrationDone() {
+    _postureBaseline = _latestAttitude;
     state = state.copyWith(phase: ZazenFlowPhase.postureConfirmed);
     _schedule(const Duration(seconds: 3), _toKoan);
   }
@@ -149,17 +197,81 @@ class ZazenFlow extends _$ZazenFlow {
   void _toInProgress() {
     state = state.copyWith(phase: ZazenFlowPhase.inProgress);
     ref.read(zazenKatsuProvider.notifier).start();
-    _schedule(Duration(minutes: ref.read(zazenDurationProvider)), _toEnded);
+    _startSampling();
+    final zazenDuration = Duration(minutes: ref.read(zazenDurationProvider));
+    _schedule(zazenDuration - const Duration(seconds: 5), _stopKatsuBeforeEnd);
+  }
+
+  void _stopKatsuBeforeEnd() {
+    ref.read(zazenKatsuProvider.notifier).stop();
+    _schedule(const Duration(seconds: 5), _toEnded);
   }
 
   void _toEnded() {
-    ref.read(zazenKatsuProvider.notifier).stop();
+    _stopSampling();
     state = state.copyWith(phase: ZazenFlowPhase.ended);
     _schedule(const Duration(seconds: 5), _toTapWaiting);
   }
 
   void _toTapWaiting() {
     state = state.copyWith(phase: ZazenFlowPhase.tapWaiting);
+  }
+
+  // ---- IMU・サンプリング ----
+
+  void _startSampling() {
+    _samplingTimer?.cancel();
+    _samplingTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (_latestAttitude != null) _postureHistory.add(_latestAttitude!);
+    });
+  }
+
+  void _stopSampling() {
+    _samplingTimer?.cancel();
+    _samplingTimer = null;
+  }
+
+  void _startResumeCountdown() {
+    state = state.copyWith(
+      phase: ZazenFlowPhase.resumeCountdown,
+      countdownValue: 3,
+    );
+    _scheduleResumeCountdownTick();
+  }
+
+  void _scheduleResumeCountdownTick() {
+    _resumeCountdownTimer?.cancel();
+    _resumeCountdownTimer = Timer(const Duration(seconds: 1), () {
+      final next = state.countdownValue - 1;
+      if (next > 0) {
+        state = state.copyWith(countdownValue: next);
+        _scheduleResumeCountdownTick();
+      } else {
+        _finishResumeCountdown();
+      }
+    });
+  }
+
+  void _finishResumeCountdown() {
+    state = state.copyWith(phase: ZazenFlowPhase.inProgress);
+    _restoreTimer();
+    _startSampling();
+    _resumeKatsu();
+  }
+
+  void _resumeKatsu() {
+    final katsuNotifier = ref.read(zazenKatsuProvider.notifier);
+    // 中断時に喝の警告中だった場合は警告カウントダウンからやり直す
+    if (katsuNotifier.pausedInWarning) {
+      katsuNotifier.resumeWarning();
+      return;
+    }
+    _katsuResumeTimer?.cancel();
+    _katsuResumeTimer = Timer(const Duration(seconds: 3), () {
+      if (state.phase == ZazenFlowPhase.inProgress) {
+        ref.read(zazenKatsuProvider.notifier).start(armed: true);
+      }
+    });
   }
 
   // ---- Timer helpers ----
@@ -189,9 +301,15 @@ class ZazenFlow extends _$ZazenFlow {
     }
   }
 
-  void _cancelTimers() {
+  void _cancelAllTimers() {
     _timer?.cancel();
     _timer = null;
     _savedRemaining = null;
+    _samplingTimer?.cancel();
+    _samplingTimer = null;
+    _katsuResumeTimer?.cancel();
+    _katsuResumeTimer = null;
+    _resumeCountdownTimer?.cancel();
+    _resumeCountdownTimer = null;
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:xen2/components/outlined_text.dart';
@@ -10,9 +12,10 @@ class Katsu extends HookWidget {
     final countdown = useState(3);
     useEffect(() {
       if (countdown.value > 0) {
-        Future.delayed(const Duration(seconds: 1), () {
+        final timer = Timer(const Duration(seconds: 1), () {
           countdown.value -= 1;
         });
+        return timer.cancel;
       }
       return null;
     }, [countdown.value]);
