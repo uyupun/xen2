@@ -66,10 +66,11 @@ dev_dependencies:
 
 flutter_native_splash:
   color: "#ffffff"
-  image: assets/logo.png
+  image: assets/logo_text.png
+  android_screen_orientation: sensorLandscape
   android_12:
     color: "#ffffff"
-    image: assets/logo.png
+    image: assets/logo_text.png
 
 flutter_launcher_icons:
   android: true
