@@ -20,24 +20,27 @@ class HanshiPainter extends CustomPainter {
   static const _swayScale = 20.0 * (pi / 180);
   static const maxSwayPx = 100.0;
 
-  // 正面基準(roll=±90°, pitch=0°)からの絶対的な逸脱量を計算。
-  // baseline との相対計算ではなく絶対値を使うことで、
-  // baseline キャプチャの誤差や座標系の違いを回避できる。
-  //   pitchDev : pitch の 0° からの逸脱（前後傾き、符号付き）
-  //   rollDev  : |roll| の 90° からの逸脱（左右傾き、符号付き）
-  // → 正面(roll=±90°, pitch=0°) のとき必ず 0
+  // キャリブレーション時の姿勢(baseline)からの逸脱量を計算。
+  // baseline がない場合は正面(roll=±90°, pitch=0°)を基準とする。
+  //   pitchDev : pitch の基準からの逸脱（前後傾き、符号付き）
+  //   rollDev  : |roll| の基準からの逸脱（左右傾き、符号付き）
+  // → 基準姿勢のとき必ず 0
   double _computeSway(AttitudeData sample) {
-    final pitchDev = sample.pitch;                    // 0° からの逸脱
-    final rollDev = sample.roll.abs() - (pi / 2);    // ±90° からの逸脱
+    final basePitch = postureBaseline?.pitch ?? 0.0;
+    final baseRoll = postureBaseline?.roll.abs() ?? (pi / 2);
+    final pitchDev = sample.pitch - basePitch;
+    final rollDev = sample.roll.abs() - baseRoll;
     return ((pitchDev + rollDev) / _swayScale).clamp(-1.0, 1.0) * maxSwayPx;
   }
 
-  // 1Hzサンプリングの角を丸めるための移動平均
-  List<double> _smoothedSwayValues(int visibleCount) {
-    const half = 8;
-    return List.generate(visibleCount, (i) {
-      final start = (i - half).clamp(0, visibleCount - 1);
-      final end = (i + half).clamp(0, visibleCount - 1);
+  // 500msサンプリングの角を丸めるための移動平均（±4サンプル ≒ ±2秒）。
+  // 描画途中に線の形が変わらないよう、常に全履歴を対象に計算する
+  List<double> _smoothedSwayValues() {
+    const half = 4;
+    final total = postureHistory.length;
+    return List.generate(total, (i) {
+      final start = (i - half).clamp(0, total - 1);
+      final end = (i + half).clamp(0, total - 1);
       var sum = 0.0;
       for (var j = start; j <= end; j++) {
         sum += _computeSway(postureHistory[j]);
@@ -49,7 +52,6 @@ class HanshiPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final bounds = Rect.fromLTWH(0, 0, size.width, size.height);
-    canvas.drawRect(bounds, Paint()..color = AppColors.background);
     canvas.clipRect(bounds);
 
     if (progress <= 0) return;
@@ -60,9 +62,7 @@ class HanshiPainter extends CustomPainter {
     if (visibleCount < 2) return;
 
     const demoMaxSway = 20.0;
-    final smoothedSwayValues = hasPostureData
-        ? _smoothedSwayValues(visibleCount)
-        : null;
+    final smoothedSwayValues = hasPostureData ? _smoothedSwayValues() : null;
 
     final inputPoints = List.generate(visibleCount, (i) {
       final t = totalPoints > 1 ? i / (totalPoints - 1) : 0.0;
