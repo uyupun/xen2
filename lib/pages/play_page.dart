@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:xen2/components/outlined_text.dart';
 import 'package:xen2/constants/app_colors.dart';
 import 'package:xen2/features/imu/imu_service.dart';
+import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
 import 'package:xen2/features/zazen/zazen_flow_provider.dart';
 import 'package:xen2/features/zazen/zazen_katsu_provider.dart';
 import 'package:xen2/features/zazen/play_flow/close_dialog.dart';
@@ -34,6 +35,7 @@ class PlayPageState extends ConsumerState<PlayPage>
     with WidgetsBindingObserver {
   late AudioPlayer _bgmPlayer;
   late AudioPlayer _bellPlayer;
+  late AudioPlayer _sePlayer;
 
   late DualVrPlayerControllerNotifier _vrControllerNotifier;
   late ZazenFlow _zazenFlowNotifier;
@@ -65,6 +67,8 @@ class PlayPageState extends ConsumerState<PlayPage>
     _bgmPlayer.setReleaseMode(ReleaseMode.loop);
     _bellPlayer = AudioPlayer();
     _bellPlayer.audioCache.prefix = '';
+    _sePlayer = AudioPlayer();
+    _sePlayer.audioCache.prefix = '';
     _attitudeSub = ImuService.instance.attitudeStream.listen((data) {
       _latestAttitude = data;
     });
@@ -77,6 +81,8 @@ class PlayPageState extends ConsumerState<PlayPage>
     _bgmPlayer.dispose();
     _bellPlayer.stop();
     _bellPlayer.dispose();
+    _sePlayer.stop();
+    _sePlayer.dispose();
     _attitudeSub?.cancel();
     _samplingTimer?.cancel();
     _bgmStartTimer?.cancel();
@@ -137,7 +143,8 @@ class PlayPageState extends ConsumerState<PlayPage>
         // 坐禅中の場合はカウントダウンを挟んで再開する
         _zazenFlowNotifier.resumeWithCountdown();
         // 再開カウントダウン中はカウントダウン終了時にBGMを再開する
-        if (ref.read(zazenFlowProvider).phase != ZazenFlowPhase.resumeCountdown) {
+        if (ref.read(zazenFlowProvider).phase !=
+            ZazenFlowPhase.resumeCountdown) {
           _resumeBgm();
         }
       }
@@ -174,6 +181,21 @@ class PlayPageState extends ConsumerState<PlayPage>
     }
   }
 
+  void _onCalibrationChanged(CalibrationStatus? prev, CalibrationStatus next) {
+    if (next == CalibrationStatus.calibrated) {
+      _sePlayer.play(
+        AssetSource('assets/calibration_complete.wav'),
+        volume: 0.5,
+      );
+    }
+  }
+
+  void _onKatsuChanged(KatsuStatus? prev, KatsuStatus next) {
+    if (next == KatsuStatus.cooldown) {
+      _sePlayer.play(AssetSource('assets/kyosaku.wav'), volume: 0.5);
+    }
+  }
+
   void _onPhaseChanged(ZazenFlowPhase? prev, ZazenFlowPhase next) {
     switch (next) {
       case ZazenFlowPhase.postureConfirmed:
@@ -188,10 +210,10 @@ class PlayPageState extends ConsumerState<PlayPage>
         _vrControllerNotifier.play();
         _startSampling();
         _bellPlayer.play(
-          AssetSource('assets/temple_bell_start.mp3'),
+          AssetSource('assets/zazen_bell_start.wav'),
           volume: 0.5,
         );
-        _scheduleBgmStart(const Duration(seconds: 9));
+        _scheduleBgmStart(const Duration(seconds: 11));
       case ZazenFlowPhase.ended:
         _bgmStartTimer?.cancel();
         _bgmStartRemaining = null;
@@ -200,10 +222,7 @@ class PlayPageState extends ConsumerState<PlayPage>
         _samplingTimer = null;
         _vrControllerNotifier.pause();
         _bgmPlayer.stop();
-        _bellPlayer.play(
-          AssetSource('assets/temple_bell_end.mp3'),
-          volume: 0.5,
-        );
+        _bellPlayer.play(AssetSource('assets/zazen_bell_end.wav'), volume: 0.5);
       default:
         break;
     }
@@ -246,7 +265,9 @@ class PlayPageState extends ConsumerState<PlayPage>
     final flowState = ref.watch(zazenFlowProvider);
     final katsuStatus = ref.watch(zazenKatsuProvider);
 
+    ref.listen(zazenCalibrationProvider, _onCalibrationChanged);
     ref.listen(zazenFlowProvider.select((s) => s.phase), _onPhaseChanged);
+    ref.listen(zazenKatsuProvider, _onKatsuChanged);
 
     useEffect(() {
       _zazenFlowNotifier.start();

@@ -165,8 +165,11 @@ class ZazenFlow extends _$ZazenFlow {
 
   void _onCalibrationDone() {
     _postureBaseline = _latestAttitude;
-    state = state.copyWith(phase: ZazenFlowPhase.postureConfirmed);
-    _schedule(const Duration(seconds: 3), _toKoan);
+    // 音を先出しするため、状態変更を100ms遅延させる
+    Timer(const Duration(milliseconds: 100), () {
+      state = state.copyWith(phase: ZazenFlowPhase.postureConfirmed);
+      _schedule(const Duration(seconds: 3), _toKoan);
+    });
   }
 
   void _toKoan() {
