@@ -71,18 +71,14 @@ class HanshiPainter extends CustomPainter {
           ? smoothedSwayValues[i]
           : sin(t * pi * 6) * demoMaxSway;
       final y = size.height / 2 + sway;
-      // 揺れが小さい(直立) = 筆圧強く太い、揺れが大きい = 筆が浮いて細い
-      final maxSway = hasPostureData ? maxSwayPx : demoMaxSway;
-      final pressure =
-          (1.0 - (sway.abs() / maxSway).clamp(0.0, 1.0)) * 0.65 + 0.35;
-      return PointVector(x, y, pressure);
+      return PointVector(x, y, 1.0);
     });
 
     final outlinePoints = getStroke(
       inputPoints,
       options: StrokeOptions(
-        size: 22,
-        thinning: 0.8,
+        size: 32,
+        thinning: 0,
         smoothing: 0.6,
         streamline: 0.6,
         start: StrokeEndOptions.start(taperEnabled: false),
