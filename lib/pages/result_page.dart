@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:xen2/components/primary_button.dart';
@@ -22,26 +23,41 @@ class ResultPage extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = useAnimationController(
+    final strokeController = useAnimationController(
       duration: const Duration(seconds: 2),
     );
     final strokeVisible = useState(true);
     final resultVisible = useState(false);
 
     useEffect(() {
+      final sePlayer = AudioPlayer();
+      sePlayer.audioCache.prefix = '';
+
+      Timer? startTimer;
+      Timer? animationTimer;
       Timer? fadeOutTimer;
       Timer? fadeInTimer;
+      // 遷移後2秒待ってから音とアニメーションを開始
+      // 音を先出しするため、アニメーション開始を50ms遅延させる
       // 一筆書きを描き終えて3秒後にゆっくり消し、
       // 消えきってから日日是好日をゆっくり表示する
-      controller.forward().then((_) {
-        fadeOutTimer = Timer(const Duration(seconds: 3), () {
-          strokeVisible.value = false;
-          fadeInTimer = Timer(_fadeDuration, () {
-            resultVisible.value = true;
+      startTimer = Timer(const Duration(seconds: 2), () {
+        sePlayer.play(AssetSource('assets/brush_stroke.wav'));
+        animationTimer = Timer(const Duration(milliseconds: 50), () {
+          strokeController.forward().then((_) {
+            fadeOutTimer = Timer(const Duration(seconds: 3), () {
+              strokeVisible.value = false;
+              fadeInTimer = Timer(_fadeDuration, () {
+                resultVisible.value = true;
+              });
+            });
           });
         });
       });
       return () {
+        sePlayer.dispose();
+        startTimer?.cancel();
+        animationTimer?.cancel();
         fadeOutTimer?.cancel();
         fadeInTimer?.cancel();
       };
@@ -115,10 +131,10 @@ class ResultPage extends HookWidget {
                   width: double.infinity,
                   height: HanshiPainter.maxSwayPx * 2 + 24,
                   child: AnimatedBuilder(
-                    animation: controller,
+                    animation: strokeController,
                     builder: (context, _) => CustomPaint(
                       painter: HanshiPainter(
-                        progress: controller.value,
+                        progress: strokeController.value,
                         postureHistory: postureHistory,
                         postureBaseline: postureBaseline,
                       ),
