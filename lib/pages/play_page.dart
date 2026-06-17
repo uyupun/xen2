@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:xen2/components/outlined_text.dart';
+import 'package:xen2/constants/app_colors.dart';
 import 'package:xen2/features/imu/imu_service.dart';
 import 'package:xen2/features/zazen/zazen_flow_provider.dart';
 import 'package:xen2/features/zazen/zazen_katsu_provider.dart';
@@ -285,7 +286,7 @@ class PlayPageState extends ConsumerState<PlayPage>
               top: 16,
               right: 16,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
+                icon: const Icon(Icons.close, color: AppColors.background),
                 onPressed: () => _showCloseDialog(context),
               ),
             ),

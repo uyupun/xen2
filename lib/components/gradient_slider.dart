@@ -117,7 +117,7 @@ class _SvgThumbShape extends SliderComponentShape {
         center,
         radius,
         Paint()
-          ..color = Colors.white
+          ..color = AppColors.background
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.5,
       );
@@ -256,7 +256,7 @@ class _GradientTrackShape extends SliderTrackShape {
     );
 
     const labelStyle = TextStyle(
-      color: Colors.white,
+      color: AppColors.background,
       fontSize: 10,
       fontWeight: FontWeight.bold,
     );
