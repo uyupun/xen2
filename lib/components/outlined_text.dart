@@ -19,7 +19,7 @@ class OutlinedText extends StatelessWidget {
             foreground: Paint()
               ..style = PaintingStyle.stroke
               ..strokeWidth = 3
-              ..color = Colors.white,
+              ..color = AppColors.background,
           ),
         ),
         Text(text, textAlign: TextAlign.center, style: style),
