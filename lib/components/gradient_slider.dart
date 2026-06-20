@@ -49,7 +49,7 @@ class _GradientSliderState extends State<GradientSlider> {
             Expanded(
               child: SliderTheme(
                 data: SliderThemeData(
-                  trackHeight: 14,
+                  trackHeight: 24,
                   trackShape: _GradientTrackShape(
                     minLabel: '初級',
                     maxLabel: '上級',
@@ -257,10 +257,10 @@ class _GradientTrackShape extends SliderTrackShape {
 
     const labelStyle = TextStyle(
       color: AppColors.background,
-      fontSize: 10,
+      fontSize: 12,
       fontWeight: FontWeight.bold,
     );
-    const hPad = 10.0;
+    const hPad = 26.0;
 
     void paintLabel(String text, {required bool alignRight}) {
       final tp = TextPainter(
