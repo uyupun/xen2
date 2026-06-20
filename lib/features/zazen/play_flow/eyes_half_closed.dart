@@ -8,7 +8,7 @@ class EyesHalfClosed extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Column(
       mainAxisSize: MainAxisSize.min,
-      children: [OutlinedText(text: '目は半分ほど閉じることを推奨します', fontSize: 20)],
+      children: [OutlinedText(text: '目は半分ほど閉じることを\n推奨します', fontSize: 20)],
     );
   }
 }
