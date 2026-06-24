@@ -105,12 +105,14 @@ class _DualVrPlayerState extends ConsumerState<DualVrPlayer> {
           top: 0,
           width: halfWidth,
           height: size.height,
-          child: VrPlayer(
-            x: 0,
-            y: 0,
-            width: halfWidth,
-            height: size.height,
-            onCreated: (c, o) => _onPlayerCreated(0, c, o),
+          child: AbsorbPointer(
+            child: VrPlayer(
+              x: 0,
+              y: 0,
+              width: halfWidth,
+              height: size.height,
+              onCreated: (c, o) => _onPlayerCreated(0, c, o),
+            ),
           ),
         ),
         // 右側のVRプレイヤー
@@ -119,12 +121,14 @@ class _DualVrPlayerState extends ConsumerState<DualVrPlayer> {
           top: 0,
           width: halfWidth,
           height: size.height,
-          child: VrPlayer(
-            x: 0,
-            y: 0,
-            width: halfWidth,
-            height: size.height,
-            onCreated: (c, o) => _onPlayerCreated(1, c, o),
+          child: AbsorbPointer(
+            child: VrPlayer(
+              x: 0,
+              y: 0,
+              width: halfWidth,
+              height: size.height,
+              onCreated: (c, o) => _onPlayerCreated(1, c, o),
+            ),
           ),
         ),
         // 中央の区切り線
