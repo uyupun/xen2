@@ -174,7 +174,7 @@ class ZazenFlow extends _$ZazenFlow {
 
   void _toKoan() {
     state = state.copyWith(phase: ZazenFlowPhase.koan, koan: randomKoan());
-    _schedule(const Duration(seconds: 10), _toEyesHalfClosed);
+    _schedule(const Duration(seconds: 15), _toEyesHalfClosed);
   }
 
   void _toEyesHalfClosed() {
