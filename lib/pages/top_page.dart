@@ -60,7 +60,7 @@ class TopPage extends ConsumerWidget {
             right: 0,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => showDialog(
+              onLongPress: () => showDialog(
                 context: context,
                 builder: (_) => const KatsuSettingsDialog(),
               ),
