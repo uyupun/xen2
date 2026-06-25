@@ -213,7 +213,7 @@ class ZazenFlow extends _$ZazenFlow {
   void _toEnded() {
     _stopSampling();
     state = state.copyWith(phase: ZazenFlowPhase.ended);
-    _schedule(const Duration(seconds: 5), _toTapWaiting);
+    _schedule(const Duration(seconds: 10), _toTapWaiting);
   }
 
   void _toTapWaiting() {
