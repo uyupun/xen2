@@ -8,7 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'pavlok_provider.g.dart';
 
 @riverpod
-Future<void> pavlok(Ref ref) async {
+Future<void> pavlok(Ref ref, int stimulusValue) async {
   const pavlokUrl = 'https://api.pavlok.com/api/v5/stimulus/send';
   final apiKey = dotenv.env['PAVLOK_API_KEY'] ?? '';
 
@@ -26,7 +26,7 @@ Future<void> pavlok(Ref ref) async {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'stimulus': {'stimulusType': 'zap', 'stimulusValue': 40},
+          'stimulus': {'stimulusType': 'zap', 'stimulusValue': stimulusValue},
         }),
       )
       .timeout(const Duration(seconds: 5));

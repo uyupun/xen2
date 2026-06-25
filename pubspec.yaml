@@ -45,6 +45,7 @@ dependencies:
   audioplayers: ^6.6.0
   flutter_dotenv: ^6.0.0
   http: ^1.6.0
+  vibration: ^3.0.0
   perfect_freehand: ^2.5.2+1
   flutter_svg: ^2.3.0
 

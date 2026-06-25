@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:xen2/features/imu/imu_service.dart';
+import 'package:xen2/features/katsu_settings/katsu_settings_provider.dart';
 import 'package:xen2/features/zazen/koans.dart';
 import 'package:xen2/features/zazen/zazen_calibration_provider.dart';
 import 'package:xen2/features/zazen/zazen_duration_provider.dart';
@@ -118,7 +119,11 @@ class ZazenFlow extends _$ZazenFlow {
     Future<void>(() {
       ref.read(zazenCalibrationProvider.notifier).reset();
       ref.read(zazenKatsuProvider.notifier).stop();
-      state = const ZazenFlowState(phase: ZazenFlowPhase.wearablePrompt);
+      final pavlokEnabled = ref.read(katsuSettingsProvider).pavlokEnabled;
+      final initialPhase = pavlokEnabled
+          ? ZazenFlowPhase.wearablePrompt
+          : ZazenFlowPhase.earphonePrompt;
+      state = ZazenFlowState(phase: initialPhase);
     });
   }
 

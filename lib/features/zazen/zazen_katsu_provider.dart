@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:vibration/vibration.dart';
 import 'package:xen2/features/imu/imu_service.dart';
+import 'package:xen2/features/katsu_settings/katsu_settings_provider.dart';
 import 'package:xen2/features/pavlok/pavlok_provider.dart';
 
 part 'zazen_katsu_provider.g.dart';
@@ -116,14 +118,22 @@ class ZazenKatsu extends _$ZazenKatsu {
     _warningTimer?.cancel();
     state = KatsuStatus.warning;
     _warningTimer = Timer(const Duration(seconds: 3), () {
-      // 喝: Pavlokへ刺激を送る
-      ref.read(pavlokProvider.future).catchError((e) {
-        debugPrint('Failed to connect to Pavlok: $e');
-      });
+      _doKatsu();
       state = KatsuStatus.cooldown;
       _cooldownTimer = Timer(const Duration(seconds: 5), () {
         state = KatsuStatus.detected;
       });
     });
+  }
+
+  void _doKatsu() {
+    final settings = ref.read(katsuSettingsProvider);
+    if (settings.pavlokEnabled) {
+      ref.read(pavlokProvider(settings.stimulusValue).future).catchError((e) {
+        debugPrint('Failed to connect to Pavlok: $e');
+      });
+    } else if (settings.vibrationEnabled) {
+      Vibration.vibrate(duration: 500);
+    }
   }
 }
