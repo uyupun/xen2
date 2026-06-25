@@ -215,7 +215,7 @@ class ZazenFlow extends _$ZazenFlow {
     _katsuResumeTimer?.cancel();
     _katsuResumeTimer = Timer(const Duration(seconds: 11), () {
       if (state.phase == ZazenFlowPhase.inProgress) {
-        ref.read(zazenKatsuProvider.notifier).start();
+        ref.read(zazenKatsuProvider.notifier).start(armed: true);
       }
     });
     final zazenDuration = Duration(minutes: ref.read(zazenDurationProvider));
