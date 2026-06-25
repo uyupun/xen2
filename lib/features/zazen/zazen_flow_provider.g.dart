@@ -41,7 +41,7 @@ final class ZazenFlowProvider
   }
 }
 
-String _$zazenFlowHash() => r'8d332e31e72a2ec61030277bbd072269716f9d1d';
+String _$zazenFlowHash() => r'6e2efacb89eceed7eaae1c31109720aefa3cfd26';
 
 abstract class _$ZazenFlow extends $Notifier<ZazenFlowState> {
   ZazenFlowState build();

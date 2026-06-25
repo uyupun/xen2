@@ -41,7 +41,7 @@ final class ZazenKatsuProvider
   }
 }
 
-String _$zazenKatsuHash() => r'4d5cc8a67411acff519098ff68145f9e8a6dd2be';
+String _$zazenKatsuHash() => r'5e2c1f2aaf26ebe286de9a9bf51a3a30c04f28cc';
 
 abstract class _$ZazenKatsu extends $Notifier<KatsuStatus> {
   KatsuStatus build();
