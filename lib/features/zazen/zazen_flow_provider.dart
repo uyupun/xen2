@@ -12,6 +12,8 @@ part 'zazen_flow_provider.g.dart';
 
 enum ZazenFlowPhase {
   idle,
+  wearablePrompt,
+  earphonePrompt,
   calibrating,
   postureConfirmed,
   koan,
@@ -93,6 +95,17 @@ class ZazenFlow extends _$ZazenFlow {
 
   // ---- Public API ----
 
+  void advanceWearablePrompt() {
+    if (state.phase != ZazenFlowPhase.wearablePrompt) return;
+    state = state.copyWith(phase: ZazenFlowPhase.earphonePrompt);
+  }
+
+  void advanceEarphonePrompt() {
+    if (state.phase != ZazenFlowPhase.earphonePrompt) return;
+    state = state.copyWith(phase: ZazenFlowPhase.calibrating);
+    ref.read(zazenCalibrationProvider.notifier).start();
+  }
+
   void start() {
     _cancelAllTimers();
     _imuSub?.cancel();
@@ -105,8 +118,7 @@ class ZazenFlow extends _$ZazenFlow {
     Future<void>(() {
       ref.read(zazenCalibrationProvider.notifier).reset();
       ref.read(zazenKatsuProvider.notifier).stop();
-      state = const ZazenFlowState(phase: ZazenFlowPhase.calibrating);
-      ref.read(zazenCalibrationProvider.notifier).start();
+      state = const ZazenFlowState(phase: ZazenFlowPhase.wearablePrompt);
     });
   }
 

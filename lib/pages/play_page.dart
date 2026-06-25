@@ -243,6 +243,8 @@ class PlayPageState extends ConsumerState<PlayPage>
 
     return switch (flow.phase) {
       ZazenFlowPhase.idle => const SizedBox.shrink(),
+      ZazenFlowPhase.wearablePrompt => const SizedBox.shrink(),
+      ZazenFlowPhase.earphonePrompt => const SizedBox.shrink(),
       ZazenFlowPhase.calibrating => const PostureDetecting(),
       ZazenFlowPhase.postureConfirmed => const PostureConfirmed(),
       ZazenFlowPhase.koan =>
@@ -281,6 +283,36 @@ class PlayPageState extends ConsumerState<PlayPage>
             assetPath: 'assets/skybox.mp4',
             foregroundWidget: _buildForegroundWidget(flowState, katsuStatus),
           ),
+          if (flowState.phase == ZazenFlowPhase.wearablePrompt)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _zazenFlowNotifier.advanceWearablePrompt,
+                child: const ColoredBox(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: OutlinedText(
+                      text: 'ウェアラブルデバイスを装着してください。\n装着後、画面をタップしてください。',
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (flowState.phase == ZazenFlowPhase.earphonePrompt)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _zazenFlowNotifier.advanceEarphonePrompt,
+                child: const ColoredBox(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: OutlinedText(
+                      text: 'イヤホンを装着してください。\n装着後、画面をタップしてください。',
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (flowState.phase == ZazenFlowPhase.tapWaiting)
             Positioned.fill(
               child: GestureDetector(
@@ -295,7 +327,7 @@ class PlayPageState extends ConsumerState<PlayPage>
                 child: const ColoredBox(
                   color: Colors.transparent,
                   child: Center(
-                    child: OutlinedText(text: 'タップしてください', fontSize: 20),
+                    child: OutlinedText(text: '画面をタップしてください', fontSize: 20),
                   ),
                 ),
               ),
