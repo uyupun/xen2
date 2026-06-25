@@ -157,7 +157,7 @@ class PlayPageState extends ConsumerState<PlayPage>
     _bgmStartDelay = delay;
     _bgmStartTimer = Timer(delay, () {
       _bgmActive = true;
-      _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.25);
+      _bgmPlayer.play(AssetSource('assets/pink_noise.mp3'), volume: 0.4);
     });
   }
 
