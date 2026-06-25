@@ -211,8 +211,13 @@ class ZazenFlow extends _$ZazenFlow {
 
   void _toInProgress() {
     state = state.copyWith(phase: ZazenFlowPhase.inProgress);
-    ref.read(zazenKatsuProvider.notifier).start();
     _startSampling();
+    _katsuResumeTimer?.cancel();
+    _katsuResumeTimer = Timer(const Duration(seconds: 11), () {
+      if (state.phase == ZazenFlowPhase.inProgress) {
+        ref.read(zazenKatsuProvider.notifier).start();
+      }
+    });
     final zazenDuration = Duration(minutes: ref.read(zazenDurationProvider));
     _schedule(zazenDuration - const Duration(seconds: 5), _stopKatsuBeforeEnd);
   }
