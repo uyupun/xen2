@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:xen2/components/gradient_slider.dart';
 import 'package:xen2/components/primary_button.dart';
 import 'package:xen2/constants/app_colors.dart';
+import 'package:xen2/features/katsu_settings/katsu_settings_dialog.dart';
 import 'package:xen2/features/zazen/zazen_duration_provider.dart';
 import 'package:xen2/pages/play_page.dart';
 
@@ -15,40 +16,58 @@ class TopPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // GradientSliderが中央に来るようにするためのスペーサー
-                SizedBox(),
-                SizedBox(
-                  width: 400,
-                  child: GradientSlider(
-                    value: duration,
-                    onChanged: (minutes) {
-                      ref.read(zazenDurationProvider.notifier).update(minutes);
-                    },
-                  ),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // GradientSliderが中央に来るようにするためのスペーサー
+                    SizedBox(),
+                    SizedBox(
+                      width: 400,
+                      child: GradientSlider(
+                        value: duration,
+                        onChanged: (minutes) {
+                          ref
+                              .read(zazenDurationProvider.notifier)
+                              .update(minutes);
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: 400,
+                      child: PrimaryButton(
+                        label: '禅',
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const PlayPage()),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(
-                  width: 400,
-                  child: PrimaryButton(
-                    label: '禅',
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PlayPage()),
-                      );
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          Positioned(
+            top: 0,
+            right: 0,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showDialog(
+                context: context,
+                builder: (_) => const KatsuSettingsDialog(),
+              ),
+              child: const SizedBox(width: 40, height: 40),
+            ),
+          ),
+        ],
       ),
     );
   }

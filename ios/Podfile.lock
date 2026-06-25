@@ -2,6 +2,8 @@ PODS:
   - audioplayers_darwin (0.0.1):
     - Flutter
     - FlutterMacOS
+  - device_info_plus (0.0.1):
+    - Flutter
   - Flutter (1.0.0)
   - flutter_native_splash (2.4.3):
     - Flutter
@@ -29,6 +31,8 @@ PODS:
     - PlayKit/Core
   - SwiftyJSON (5.0.0)
   - SwiftyXMLParser (5.0.0)
+  - vibration (3.0.0):
+    - Flutter
   - vr_player (0.0.1):
     - Flutter
     - PlayKitProviders
@@ -40,8 +44,10 @@ PODS:
 
 DEPENDENCIES:
   - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
+  - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
   - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
+  - vibration (from `.symlinks/plugins/vibration/ios`)
   - vr_player (from `.symlinks/plugins/vr_player/ios`)
 
 SPEC REPOS:
@@ -59,15 +65,20 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   audioplayers_darwin:
     :path: ".symlinks/plugins/audioplayers_darwin/darwin"
+  device_info_plus:
+    :path: ".symlinks/plugins/device_info_plus/ios"
   Flutter:
     :path: Flutter
   flutter_native_splash:
     :path: ".symlinks/plugins/flutter_native_splash/ios"
+  vibration:
+    :path: ".symlinks/plugins/vibration/ios"
   vr_player:
     :path: ".symlinks/plugins/vr_player/ios"
 
 SPEC CHECKSUMS:
   audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
+  device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
   KalturaNetKit: 2af6c3c2a1abbd8936b5acde45f33f5195125f4a
@@ -78,6 +89,7 @@ SPEC CHECKSUMS:
   PlayKitVR: f8e0d16d011b7092838819d4e649d5d77923b62d
   SwiftyJSON: 36413e04c44ee145039d332b4f4e2d3e8d6c4db7
   SwiftyXMLParser: 5ebb8793192f403fa8cc691045143906122a7a75
+  vibration: ca8104a8875b9c493e15b21b04e456befd0ff6eb
   vr_player: d00629ddccb37d026c16182e3ea2021ffba0a4e4
   XCGLogger: 0434f15e3909cdc450bb63faf638b8792ab782ab
 
