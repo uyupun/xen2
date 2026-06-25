@@ -40,4 +40,4 @@ final class PavlokProvider
   }
 }
 
-String _$pavlokHash() => r'74d37bd27aca710a786c95a8e7bf7f7caf5fc085';
+String _$pavlokHash() => r'bb1bfa0553663eed9b6b1b49e8d5ad2f20aa1017';

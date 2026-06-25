@@ -26,7 +26,7 @@ Future<void> pavlok(Ref ref) async {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'stimulus': {'stimulusType': 'zap', 'stimulusValue': 25},
+          'stimulus': {'stimulusType': 'zap', 'stimulusValue': 40},
         }),
       )
       .timeout(const Duration(seconds: 5));
